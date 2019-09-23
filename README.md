@@ -23,3 +23,11 @@ https://github.com/padster/go-sound
 apt-get install libportmidi-dev
 
 go get ./...
+
+Useful posts on threading: 
+
+https://pragmacoders.com/blog/multithreading-in-go-a-tutorial
+
+Structs: 
+
+https://golangbot.com/structs-instead-of-classes/
