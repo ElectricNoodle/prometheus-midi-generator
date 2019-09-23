@@ -27,7 +27,9 @@ go get ./...
 Useful posts on threading: 
 
 https://pragmacoders.com/blog/multithreading-in-go-a-tutorial
+https://medium.com/@matryer/stopping-goroutines-golang-1bf28799c1cb
 
 Structs: 
 
 https://golangbot.com/structs-instead-of-classes/
+
