@@ -1,3 +1,5 @@
+##################################
+
 README
 
 ##################################
@@ -10,6 +12,8 @@ Dependencies
 
 ##################################
 
+https://github.com/gomidi/midi
+https://github.com/go-audio/midi
 https://github.com/rakyll/portmidi
 https://github.com/go-music-theory/music-theory
 https://github.com/go-gl/glfw
