@@ -3,40 +3,53 @@ package main
 import (
 	"fmt"
 	"strconv"
-	//"io/ioutil"
 	"net/http"
 	"encoding/json"
 )
 
 type Metric struct {
-	instance string
-	job string
+	Instance string
+	Job string
 }
 
-type Value struct {
-	data []string
+type Point struct {
+    Timestamp int64
+    Value float64
 }
 
 type TimeSeries struct {
-	metric Metric
-	values []Value
+	Metric Metric
+	Values []Point
 }
 
 type PrometheusData struct {
-	resultType string
-    results []TimeSeries
+	ResultType string
+    Result []TimeSeries
 }
 
 type APIResponse  struct {
-	status string
-	data PrometheusData
+	Status string 
+	Data PrometheusData
 }
 
 type prometheusScraper struct {
 	queryEndpoint string
 }
 
+ func (tp *Point) UnmarshalJSON(data []byte) error {
 
+    var v []interface{}
+    
+	if err := json.Unmarshal(data, &v); err != nil {
+		fmt.Printf("Error while decoding Point %v\n", err)
+		return err
+    }
+    
+	tp.Timestamp = int64(v[0].(float64))
+	tp.Value, _ = strconv.ParseFloat(v[1].(string), 64)
+
+	return nil
+} 
 
 func newPrometheusScraper(queryEndpoint string, controlChannel chan <- string, outputChannel <- chan int) *prometheusScraper {
 	
@@ -50,10 +63,6 @@ func newPrometheusScraper(queryEndpoint string, controlChannel chan <- string, o
 }
 
 func (collector *prometheusScraper) queryPrometheus(promQuery string, start int, end int, step int) {
-	//stddev_over_time(pf_current_entries_total%7Binstance%3D~"sovapn%5B1%7C2%5D%3A9116"%7D%5B12h%5D)%20&start=1568722200&end=1569327600&step=600
-	
-
-	//promData := new(PrometheusData)
 
 	request, err := http.NewRequest("GET", collector.queryEndpoint, nil)
     
@@ -76,10 +85,6 @@ func (collector *prometheusScraper) queryPrometheus(promQuery string, start int,
     result,err := http.DefaultClient.Do(request)
     defer result.Body.Close()
 
-  //  body, _ := ioutil.ReadAll(result.Body)
-
-  //  fmt.Println("%s\n %v\n", string(body), result.Body)
-
     var apiResponse APIResponse
 
     e := json.NewDecoder(result.Body).Decode(&apiResponse)
@@ -87,19 +92,9 @@ func (collector *prometheusScraper) queryPrometheus(promQuery string, start int,
     if e != nil {
         fmt.Printf("%s\n", e)
     }
-    fmt.Println("%v\n", apiResponse)
 
+    fmt.Printf("%+v\n", apiResponse.Status)
+    fmt.Printf("%+v\n", apiResponse.Data.ResultType)
+    fmt.Printf("%+v\n", apiResponse.Data.Result)
+    
 }
-
-func (collector *prometheusScraper) getJson(url string, target interface{}) error {
-    r, err := http.Get(url)
-    if err != nil {
-        return err
-    }
-    defer r.Body.Close()
-    fmt.Printf("%s", r.Body)
-    return json.NewDecoder(r.Body).Decode(target)
-}
-
-
-//http://192.168.150.187:9090/api/v1/query_range?query=rate(pf_current_entries_total%7Binstance%3D~%22sovapn%5B1%7C2%5D%3A9116%22%7D%5B2m%5D)&start=1568833800&end=1569439200&step=600
