@@ -36,7 +36,7 @@ type prometheusScraper struct {
 	queryEndpoint string
 }
 
- func (tp *Point) UnmarshalJSON(data []byte) error {
+func (tp *Point) UnmarshalJSON(data []byte) error {
 
     var v []interface{}
     
