@@ -42,6 +42,7 @@ type prometheusScraper struct {
 }
 
 type MessageType int
+
 const(
     StartOutput MessageType = 0
     StopOutput  MessageType = 1
@@ -49,6 +50,7 @@ const(
 )
 
 type OutputType int
+
 const(
     Playback    OutputType = 0
     Live        OutputType = 1
@@ -61,6 +63,7 @@ type QueryInfo struct {
     End   float64
     Step  int
 }
+
 type ControlMessage struct {
     Type MessageType
     OutputType OutputType
@@ -85,13 +88,9 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 
 func newPrometheusScraper(queryEndpoint string, mode string, controlChannel <- chan ControlMessage, outputChannel chan <- int) *prometheusScraper {
 	
-	fmt.Printf("Server: %s\n", queryEndpoint)
-	
-	prometheusScraper := prometheusScraper {queryEndpoint,outputChannel, controlChannel, []Point{},Init}
-
+	prometheusScraper := prometheusScraper { queryEndpoint,outputChannel, controlChannel, []Point{}, Init }
     go prometheusScraper.controlThread()
 	
-
 	return &prometheusScraper
 }
 
@@ -107,9 +106,7 @@ func (collector *prometheusScraper) controlThread() {
            
             fmt.Printf("Starting output thread.. Playback Type: %i\n", message.OutputType)
             fmt.Printf("Query: %s Start: %i Stop: %i Step: %i \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
-           
             collector.queryPrometheus(message.OutputType, message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
-
 
         case StopOutput:
             fmt.Printf("Stopping output thread..\n")
@@ -123,11 +120,12 @@ func (collector *prometheusScraper) controlThread() {
 func (collector *prometheusScraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
 
     collector.data = collector.getTimeSeriesData(query, start, end, step)
-    go collector.outputThread()
 
     if mode == Live {
         go collector.queryThread(query, step)
     }
+
+    go collector.outputThread()
 
     return true
 }
@@ -141,7 +139,7 @@ func (collector *prometheusScraper) queryThread(query string, step int) {
 }
  
 /* Returns an array of points which represent the timeseries data for the specified query.
-   NOTE: Doesn't handle more than one set of time series (Result[0] ret), will expand to handle it later.
+   NOTE: Doesn't handle more than one set of time series (Result[0]), Will expand to handle it later.
 */
 func (collector *prometheusScraper) getTimeSeriesData(query string, start float64, end float64, step int) []Point {
 	request, err := http.NewRequest("GET", collector.Target, nil)
@@ -176,10 +174,6 @@ func (collector *prometheusScraper) getTimeSeriesData(query string, start float6
         fmt.Printf("%s\n", e)
         return []Point{}
     }
-
-    fmt.Printf("%+v\n", apiResponse.Status)
-    //fmt.Printf("%+v\n", apiResponse.Data.ResultType)
-    fmt.Printf("%+v\n", apiResponse.Data.Result)
-
+    /* Need to check that return value is valid before returning. */
     return apiResponse.Data.Result[0].Values
 }

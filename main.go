@@ -29,11 +29,9 @@ func main() {
 	prometheusChannel <- messageStop
 
 	for {
-		fmt.Println("TEST")
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 	}
-//	<-outputChannel
-
+	
 	/*
 	w := app.NewWindow("Hello")
 	w.SetContent(widget.NewVBox(
