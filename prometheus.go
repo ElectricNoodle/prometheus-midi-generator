@@ -1,7 +1,8 @@
 package main 
 
 import (
-	"fmt"
+    "fmt"
+ //   "time"
 	"strconv"
 	"net/http"
 	"encoding/json"
@@ -33,8 +34,39 @@ type APIResponse  struct {
 }
 
 type prometheusScraper struct {
-	queryEndpoint string
+    Target string
+    output chan <- int
+    control <- chan ControlMessage
+    data []Point
+    mode OutputType
 }
+
+type MessageType int
+const(
+    StartOutput MessageType = 0
+    StopOutput  MessageType = 1
+
+)
+
+type OutputType int
+const(
+    Playback    OutputType = 0
+    Live        OutputType = 1
+    Init        OutputType = -1
+)
+
+type QueryInfo struct {
+    Query string
+    Start float64
+    End   float64
+    Step  int
+}
+type ControlMessage struct {
+    Type MessageType
+    OutputType OutputType
+    QueryInfo QueryInfo 
+}
+
 
 func (tp *Point) UnmarshalJSON(data []byte) error {
 
@@ -51,30 +83,80 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 	return nil
 } 
 
-func newPrometheusScraper(queryEndpoint string, controlChannel chan <- string, outputChannel <- chan int) *prometheusScraper {
+func newPrometheusScraper(queryEndpoint string, mode string, controlChannel <- chan ControlMessage, outputChannel chan <- int) *prometheusScraper {
 	
 	fmt.Printf("Server: %s\n", queryEndpoint)
 	
-	prometheusScraper := prometheusScraper {queryEndpoint:queryEndpoint }
+	prometheusScraper := prometheusScraper {queryEndpoint,outputChannel, controlChannel, []Point{},Init}
 
+    go prometheusScraper.controlThread()
 	
 
 	return &prometheusScraper
 }
 
-func (collector *prometheusScraper) queryPrometheus(promQuery string, start int, end int, step int) {
+/* This function listens for any incoming messages and handles them accordingly */
+func (collector *prometheusScraper) controlThread() {
+    for {
 
-	request, err := http.NewRequest("GET", collector.queryEndpoint, nil)
+        message := <-collector.control
+
+        switch message.Type {
+        
+        case StartOutput:
+           
+            fmt.Printf("Starting output thread.. Playback Type: %i\n", message.OutputType)
+            fmt.Printf("Query: %s Start: %i Stop: %i Step: %i \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
+           
+            collector.queryPrometheus(message.OutputType, message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
+
+
+        case StopOutput:
+            fmt.Printf("Stopping output thread..\n")
+        default:
+            fmt.Printf("Unknown MessageType: %i \n", message.Type )
+        } 
+    }
+}
+
+/* Thread  */
+func (collector *prometheusScraper) queryPrometheus(mode OutputType, promQuery string, start float64, end float64, step int) bool {
+
+    if mode == Playback {
+        fmt.Printf("In playback mode\n")
+        collector.data = collector.getTimeSeriesData(promQuery, start, end, step)
+        go collector.outputThread()
+
+    }else if mode == Live {
+        fmt.Printf("In live mode\n")
+        /* Need to start thread here that sleeps  */
+    }
+
+    return true
+}
+
+func (collector *prometheusScraper) outputThread() {
+
+}
+
+/* Returns an array of points which represent the timeseries data for the specified query.
+   NOTE: Doesn't handle more than one set of time series (Result[0] ret), will expand to handle it later.
+*/
+func (collector *prometheusScraper) getTimeSeriesData(promQuery string, start float64, end float64, step int) []Point {
+	request, err := http.NewRequest("GET", collector.Target, nil)
     
     if err != nil {
         fmt.Printf("%s\n", err)
+        return []Point{}
     }
 
+    
     q := request.URL.Query()
+
     q.Add("query", promQuery)
-    q.Add("start", strconv.Itoa(start))
-    q.Add("end", strconv.Itoa(end))
-    q.Add("step", strconv.Itoa(step))
+    q.Add("start", strconv.FormatFloat(start, 'f', 6, 64))
+    q.Add("end",   strconv.FormatFloat(end, 'f', 6, 64))
+    q.Add("step",  strconv.Itoa(step))
 
     request.URL.RawQuery = q.Encode()
 
@@ -91,10 +173,12 @@ func (collector *prometheusScraper) queryPrometheus(promQuery string, start int,
 
     if e != nil {
         fmt.Printf("%s\n", e)
+        return []Point{}
     }
 
     fmt.Printf("%+v\n", apiResponse.Status)
-    fmt.Printf("%+v\n", apiResponse.Data.ResultType)
+    //fmt.Printf("%+v\n", apiResponse.Data.ResultType)
     fmt.Printf("%+v\n", apiResponse.Data.Result)
-    
+
+    return apiResponse.Data.Result[0].Values
 }
