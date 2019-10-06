@@ -119,30 +119,31 @@ func (collector *prometheusScraper) controlThread() {
     }
 }
 
-/* Thread  */
-func (collector *prometheusScraper) queryPrometheus(mode OutputType, promQuery string, start float64, end float64, step int) bool {
+/*  Stores the initial time series data, starts the output thread, and also the live playback query thread if required. */
+func (collector *prometheusScraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
 
-    if mode == Playback {
-        fmt.Printf("In playback mode\n")
-        collector.data = collector.getTimeSeriesData(promQuery, start, end, step)
-        go collector.outputThread()
+    collector.data = collector.getTimeSeriesData(query, start, end, step)
+    go collector.outputThread()
 
-    }else if mode == Live {
-        fmt.Printf("In live mode\n")
-        /* Need to start thread here that sleeps  */
+    if mode == Live {
+        go collector.queryThread(query, step)
     }
 
     return true
 }
 
 func (collector *prometheusScraper) outputThread() {
-
+    /* Query data structure using mutex in timed loop based on step and emit message to output channel. */
 }
 
+func (collector *prometheusScraper) queryThread(query string, step int) {
+    /* Populate data structure using mutex in timed loop based on step. Need to make sure the query poll rate is a division of step. */
+}
+ 
 /* Returns an array of points which represent the timeseries data for the specified query.
    NOTE: Doesn't handle more than one set of time series (Result[0] ret), will expand to handle it later.
 */
-func (collector *prometheusScraper) getTimeSeriesData(promQuery string, start float64, end float64, step int) []Point {
+func (collector *prometheusScraper) getTimeSeriesData(query string, start float64, end float64, step int) []Point {
 	request, err := http.NewRequest("GET", collector.Target, nil)
     
     if err != nil {
@@ -153,7 +154,7 @@ func (collector *prometheusScraper) getTimeSeriesData(promQuery string, start fl
     
     q := request.URL.Query()
 
-    q.Add("query", promQuery)
+    q.Add("query", query)
     q.Add("start", strconv.FormatFloat(start, 'f', 6, 64))
     q.Add("end",   strconv.FormatFloat(end, 'f', 6, 64))
     q.Add("step",  strconv.Itoa(step))
