@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/golang-collections/go-datastructures/queue"
 )
@@ -42,7 +43,8 @@ type prometheusScraper struct {
 	data    *queue.RingBuffer
 }
 
-const RING_SIZE = 100
+const POLL_RATE = 10000
+const RING_SIZE = 10000
 
 type MessageType int
 
@@ -87,9 +89,9 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func newPrometheusScraper(queryEndpoint string, mode string, controlChannel <-chan ControlMessage, outputChannel chan<- int) *prometheusScraper {
+func newPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- int) *prometheusScraper {
 
-	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, Init, queue.NewRingBuffer(RING_SIZE)}
+	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(RING_SIZE)}
 	go prometheusScraper.controlThread()
 
 	return &prometheusScraper
@@ -107,6 +109,7 @@ func (collector *prometheusScraper) controlThread() {
 
 			fmt.Printf("Starting output thread.. Playback Type: %d\n", message.OutputType)
 			fmt.Printf("Query: %s Start: %f Stop: %f Step: %d \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
+
 			collector.queryPrometheus(message.OutputType, message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
 
 		case StopOutput:
@@ -120,9 +123,11 @@ func (collector *prometheusScraper) controlThread() {
 /*  Stores the initial time series data, starts the output thread, and also the live playback query thread if required. */
 func (collector *prometheusScraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
 
-	// /collector.data = collector.getTimeSeriesData(query, start, end, step)
+	data := collector.getTimeSeriesData(query, start, end, step)
+	collector.populateRingBuffer(data)
 
 	if mode == Live {
+		fmt.Println("In live mode")
 		go collector.queryThread(query, step)
 	}
 
@@ -138,7 +143,22 @@ func (collector *prometheusScraper) outputThread() {
 
 func (collector *prometheusScraper) queryThread(query string, step int) {
 	/* Populate data structure using mutex in timed loop based on step. Need to make sure the query poll rate is a division of step. */
+	for {
+		now := float64(time.Now().Unix())
+		fmt.Printf("Polling for data..\n")
 
+		data := collector.getTimeSeriesData(query, now, now, step)
+		collector.populateRingBuffer(data)
+
+		time.Sleep(POLL_RATE * time.Millisecond)
+	}
+}
+
+func (collector *prometheusScraper) populateRingBuffer(data []Point) {
+	for _, point := range data {
+		fmt.Printf("Value: %f\n", point.Value)
+		collector.data.Put(point.Value)
+	}
 }
 
 /* Returns an array of points which represent the timeseries data for the specified query.
