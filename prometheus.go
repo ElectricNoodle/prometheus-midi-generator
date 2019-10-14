@@ -36,21 +36,27 @@ type APIResponse struct {
 }
 
 type prometheusScraper struct {
-	Target  string
-	output  chan<- int
-	control <-chan ControlMessage
-	mode    OutputType
-	data    *queue.RingBuffer
+	Target     string
+	output     chan<- float64
+	control    <-chan PrometheusControlMessage
+	mode       OutputType
+	data       *queue.RingBuffer
+	pollRate   int
+	outputRate int
 }
 
-const POLL_RATE = 10000
 const RING_SIZE = 10000
+
+const DEFAULT_POLL_RATE = 10000
+const DEFAULT_OUTPUT_RATE = 100
 
 type MessageType int
 
 const (
-	StartOutput MessageType = 0
-	StopOutput  MessageType = 1
+	StartOutput      MessageType = 0
+	StopOutput       MessageType = 1
+	ChangePollRate   MessageType = 2
+	ChangeOutputRate MessageType = 3
 )
 
 type OutputType int
@@ -68,10 +74,11 @@ type QueryInfo struct {
 	Step  int
 }
 
-type ControlMessage struct {
+type PrometheusControlMessage struct {
 	Type       MessageType
 	OutputType OutputType
 	QueryInfo  QueryInfo
+	Value      int
 }
 
 func (tp *Point) UnmarshalJSON(data []byte) error {
@@ -89,9 +96,9 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func newPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- int) *prometheusScraper {
+func newPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan PrometheusControlMessage, outputChannel chan<- float64) *prometheusScraper {
 
-	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(RING_SIZE)}
+	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(RING_SIZE), DEFAULT_POLL_RATE, DEFAULT_OUTPUT_RATE}
 	go prometheusScraper.controlThread()
 
 	return &prometheusScraper
@@ -111,6 +118,16 @@ func (collector *prometheusScraper) controlThread() {
 			fmt.Printf("Query: %s Start: %f Stop: %f Step: %d \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
 
 			collector.queryPrometheus(message.OutputType, message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
+
+		case ChangePollRate:
+
+			fmt.Printf("Changing PollRate by (%d) \n", message.Value)
+			collector.pollRate += message.Value
+
+		case ChangeOutputRate:
+
+			fmt.Printf("Changing OutputRate by (%d) \n", message.Value)
+			collector.outputRate += message.Value
 
 		case StopOutput:
 			fmt.Printf("Stopping output thread..\n")
@@ -136,21 +153,34 @@ func (collector *prometheusScraper) queryPrometheus(mode OutputType, query strin
 	return true
 }
 
+/* Gets the next item from the RingBuffer and emits it on the output channel. Then sleeps for a configurable duration. */
 func (collector *prometheusScraper) outputThread() {
-	/* Query data structure using mutex in timed loop based on step and emit message to output channel. */
+	for {
 
+		item, err := collector.data.Get()
+
+		if err != nil {
+			fmt.Printf("Error: %s", err)
+		}
+
+		collector.output <- item.(float64)
+
+		time.Sleep(time.Duration(collector.outputRate) * time.Millisecond)
+	}
 }
 
+/* Queries for latest TimeSeries data, and sleeps for configurable duration. */
 func (collector *prometheusScraper) queryThread(query string, step int) {
-	/* Populate data structure using mutex in timed loop based on step. Need to make sure the query poll rate is a division of step. */
 	for {
+
 		now := float64(time.Now().Unix())
 		fmt.Printf("Polling for data..\n")
 
 		data := collector.getTimeSeriesData(query, now, now, step)
 		collector.populateRingBuffer(data)
 
-		time.Sleep(POLL_RATE * time.Millisecond)
+		time.Sleep(time.Duration(collector.pollRate) * time.Millisecond)
+
 	}
 }
 
