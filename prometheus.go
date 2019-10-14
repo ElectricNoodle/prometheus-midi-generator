@@ -99,13 +99,13 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 func newPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan PrometheusControlMessage, outputChannel chan<- float64) *prometheusScraper {
 
 	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(RING_SIZE), DEFAULT_POLL_RATE, DEFAULT_OUTPUT_RATE}
-	go prometheusScraper.controlThread()
+	go prometheusScraper.prometheusControlThread()
 
 	return &prometheusScraper
 }
 
 /* This function listens for any incoming messages and handles them accordingly */
-func (collector *prometheusScraper) controlThread() {
+func (collector *prometheusScraper) prometheusControlThread() {
 	for {
 
 		message := <-collector.control

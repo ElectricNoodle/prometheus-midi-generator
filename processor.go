@@ -14,5 +14,16 @@ func newProcessor(controlChannel <-chan ProcessorControlMessage, inputChannel <-
 
 	processor := processor{controlChannel, inputChannel, outputChannel}
 
+	go processor.processorControlThread()
+
 	return &processor
+}
+
+/* This function listens for any incoming messages and handles them accordingly */
+func (collector *processor) processorControlThread() {
+	for {
+
+		//message := <-collector.control
+
+	}
 }
