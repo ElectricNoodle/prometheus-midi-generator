@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"prometheus-midi-generator/prometheus"
 	"time"
 	//"fyne.io/fyne/widget"
 	//"fyne.io/fyne/app"
@@ -11,21 +12,20 @@ func main() {
 
 	//app := app.New()
 
-	prometheusChannel := make(chan PrometheusControlMessage, 3)
-	outputChannel := make(chan float64, 3)
+	prometheusControlChannel := make(chan prometheus.ControlMessage, 3)
+	prometheusOutputChannel := make(chan float64, 3)
 
-	prometheus := newPrometheusScraper("http://192.168.150.187:9090/api/v1/query_range", Live, prometheusChannel, outputChannel)
+	prometheusScraper := prometheus.NewPrometheusScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Live, prometheusControlChannel, prometheusOutputChannel)
 
-	fmt.Printf("%s\n", prometheus.Target)
+	fmt.Printf("%s\n", prometheusScraper.Target)
 
-	queryInfo := QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1568722200, 1569327600, 600}
+	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1568722200, 1569327600, 600}
 
-	messageStart := PrometheusControlMessage{StartOutput, Live, queryInfo, 0}
-	messageStop := PrometheusControlMessage{StopOutput, 0, QueryInfo{}, 0}
+	messageStart := prometheus.ControlMessage{prometheus.StartOutput, prometheus.Live, queryInfo, 0}
+	messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
 
-	prometheusChannel <- messageStart
-
-	prometheusChannel <- messageStop
+	prometheusControlChannel <- messageStart
+	prometheusControlChannel <- messageStop
 
 	for {
 		time.Sleep(2000 * time.Millisecond)

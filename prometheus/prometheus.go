@@ -1,4 +1,4 @@
-package main
+package prometheus
 
 import (
 	"encoding/json"
@@ -38,7 +38,7 @@ type APIResponse struct {
 type prometheusScraper struct {
 	Target     string
 	output     chan<- float64
-	control    <-chan PrometheusControlMessage
+	control    <-chan ControlMessage
 	mode       OutputType
 	data       *queue.RingBuffer
 	pollRate   int
@@ -74,7 +74,7 @@ type QueryInfo struct {
 	Step  int
 }
 
-type PrometheusControlMessage struct {
+type ControlMessage struct {
 	Type       MessageType
 	OutputType OutputType
 	QueryInfo  QueryInfo
@@ -96,7 +96,7 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func newPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan PrometheusControlMessage, outputChannel chan<- float64) *prometheusScraper {
+func NewPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *prometheusScraper {
 
 	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(RING_SIZE), DEFAULT_POLL_RATE, DEFAULT_OUTPUT_RATE}
 	go prometheusScraper.prometheusControlThread()
