@@ -17,11 +17,12 @@ type MidiControlMessage struct {
 type midi struct {
 	control <-chan MidiControlMessage
 	input   <-chan MidiMessage
+	Port    string
 }
 
-func newMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *midi {
+func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *midi {
 
-	midi := midi{controlChannel, inputChannel}
+	midi := midi{controlChannel, inputChannel, "Test"}
 	var bf bytes.Buffer
 
 	wr := midiwriter.New(&bf)

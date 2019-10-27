@@ -44,10 +44,10 @@ type processor struct {
 	control <-chan ControlMessage
 	input   <-chan float64
 	output  chan<- midi.MidiMessage
-	bpm     float64
+	BPM     float64
 }
 
-func newProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midi.MidiMessage) *processor {
+func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midi.MidiMessage) *processor {
 
 	processor := processor{controlChannel, inputChannel, outputChannel, DEFAULT_BPM}
 
@@ -59,9 +59,9 @@ func newProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 /* This function listens for any incoming messages and handles them accordingly */
 func (collector *processor) processorControlThread() {
 	for {
-
 		message := <-collector.control
 		fmt.Printf("TEST %f\n", message.Value)
+
 	}
 }
 

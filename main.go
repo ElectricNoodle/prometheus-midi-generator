@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"prometheus-midi-generator/midi"
+	"prometheus-midi-generator/processor"
 	"prometheus-midi-generator/prometheus"
 	"time"
 	//"fyne.io/fyne/widget"
@@ -15,9 +17,18 @@ func main() {
 	prometheusControlChannel := make(chan prometheus.ControlMessage, 3)
 	prometheusOutputChannel := make(chan float64, 3)
 
+	processorControlChannel := make(chan processor.ControlMessage, 3)
+	processorOutputChannel := make(chan midi.MidiMessage, 3)
+
+	midiControlChannel := make(chan midi.MidiControlMessage, 3)
+
 	prometheusScraper := prometheus.NewPrometheusScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Live, prometheusControlChannel, prometheusOutputChannel)
+	prometheusProcessor := processor.NewProcessor(processorControlChannel, prometheusOutputChannel, processorOutputChannel)
+	midiOutput := midi.NewMidi(midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)
+	fmt.Printf("%f\n", prometheusProcessor.BPM)
+	fmt.Printf("%s\n", midiOutput.Port)
 
 	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1568722200, 1569327600, 600}
 
