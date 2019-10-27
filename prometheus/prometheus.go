@@ -186,7 +186,7 @@ func (collector *prometheusScraper) queryThread(query string, step int) {
 
 func (collector *prometheusScraper) populateRingBuffer(data []Point) {
 	for _, point := range data {
-		fmt.Printf("Value: %f\n", point.Value)
+		fmt.Printf("PromValue: %f\n", point.Value)
 		collector.data.Put(point.Value)
 	}
 }

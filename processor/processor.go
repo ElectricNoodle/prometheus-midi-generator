@@ -2,7 +2,7 @@ package processor
 
 import (
 	"fmt"
-	"prometheus-midi-generator/midi"
+	"prometheus-midi-generator/midioutput"
 )
 
 var notes = [13]string{"CLow", "C#", "D", "D#", "E", "G", "F#", "G", "G#", "A", "A#", "B", "CHigh"}
@@ -43,15 +43,16 @@ const DEFAULT_BPM = 60
 type processor struct {
 	control <-chan ControlMessage
 	input   <-chan float64
-	output  chan<- midi.MidiMessage
+	output  chan<- midioutput.MidiMessage
 	BPM     float64
 }
 
-func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midi.MidiMessage) *processor {
+func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *processor {
 
 	processor := processor{controlChannel, inputChannel, outputChannel, DEFAULT_BPM}
 
 	go processor.processorControlThread()
+	go processor.processorGenerationThread()
 
 	return &processor
 }
@@ -68,6 +69,17 @@ func (collector *processor) processorControlThread() {
 func (collector *processor) processorGenerationThread() {
 	for {
 		message := <-collector.input
-		fmt.Printf("Value: %f \n", message)
+		fmt.Printf("ProcessorValue: %f \n", message)
+	}
+}
+
+func (collector *processor) processorNoteEmitterThread() {
+	tick := 0
+	for {
+		fmt.Println("Tick..")
+
+		tick++
+
+		//time.Sleep((tick % collector.BPM) * time.Millisecond)
 	}
 }

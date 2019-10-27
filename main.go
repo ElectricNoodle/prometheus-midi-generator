@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"prometheus-midi-generator/midi"
+	"prometheus-midi-generator/midioutput"
 	"prometheus-midi-generator/processor"
 	"prometheus-midi-generator/prometheus"
 	"time"
@@ -18,19 +18,19 @@ func main() {
 	prometheusOutputChannel := make(chan float64, 3)
 
 	processorControlChannel := make(chan processor.ControlMessage, 3)
-	processorOutputChannel := make(chan midi.MidiMessage, 3)
+	processorOutputChannel := make(chan midioutput.MidiMessage, 3)
 
-	midiControlChannel := make(chan midi.MidiControlMessage, 3)
+	midiControlChannel := make(chan midioutput.MidiControlMessage, 3)
 
 	prometheusScraper := prometheus.NewPrometheusScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Live, prometheusControlChannel, prometheusOutputChannel)
 	prometheusProcessor := processor.NewProcessor(processorControlChannel, prometheusOutputChannel, processorOutputChannel)
-	midiOutput := midi.NewMidi(midiControlChannel, processorOutputChannel)
+	midiOutput := midioutput.NewMidi(midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)
 	fmt.Printf("%f\n", prometheusProcessor.BPM)
 	fmt.Printf("%s\n", midiOutput.Port)
 
-	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1568722200, 1569327600, 600}
+	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1571961600, 1571961600, 600}
 
 	messageStart := prometheus.ControlMessage{prometheus.StartOutput, prometheus.Live, queryInfo, 0}
 	messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
