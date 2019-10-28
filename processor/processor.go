@@ -2,7 +2,9 @@ package processor
 
 import (
 	"fmt"
+	"math"
 	"prometheus-midi-generator/midioutput"
+	"time"
 )
 
 var notes = [13]string{"CLow", "C#", "D", "D#", "E", "G", "F#", "G", "G#", "A", "A#", "B", "CHigh"}
@@ -39,26 +41,28 @@ type ScaleTheory struct {
 }
 
 const DEFAULT_BPM = 60
+const DEFAULT_TICK = 500
 
 type processor struct {
 	control <-chan ControlMessage
 	input   <-chan float64
 	output  chan<- midioutput.MidiMessage
 	BPM     float64
+	Tick    time.Duration
 }
 
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *processor {
 
-	processor := processor{controlChannel, inputChannel, outputChannel, DEFAULT_BPM}
+	processor := processor{controlChannel, inputChannel, outputChannel, DEFAULT_BPM, DEFAULT_TICK}
 
-	go processor.processorControlThread()
-	go processor.processorGenerationThread()
+	go processor.controlThread()
+	go processor.generationThread()
 
 	return &processor
 }
 
 /* This function listens for any incoming messages and handles them accordingly */
-func (collector *processor) processorControlThread() {
+func (collector *processor) controlThread() {
 	for {
 		message := <-collector.control
 		fmt.Printf("TEST %f\n", message.Value)
@@ -66,20 +70,25 @@ func (collector *processor) processorControlThread() {
 	}
 }
 
-func (collector *processor) processorGenerationThread() {
+func (collector *processor) generationThread() {
+	var tick float64
+	tick = 0
 	for {
-		message := <-collector.input
-		fmt.Printf("ProcessorValue: %f \n", message)
-	}
-}
 
-func (collector *processor) processorNoteEmitterThread() {
-	tick := 0
-	for {
-		fmt.Println("Tick..")
+		select {
+		case message := <-collector.input:
+			fmt.Printf("ProcessorValue: %f \n", message)
+		default:
+			fmt.Println("no message received")
 
-		tick++
+			//tick = tick % ((collector.BPM / 60) * 1000)
+			fmt.Printf("Tick..%f\n", tick)
+			//time.Duration(value) * time.Millisecond
 
-		//time.Sleep((tick % collector.BPM) * time.Millisecond)
+			tick += float64(collector.Tick)
+			tick = math.Mod(tick, (60/collector.BPM)*1000)
+			time.Sleep(collector.Tick * time.Millisecond)
+		}
+
 	}
 }

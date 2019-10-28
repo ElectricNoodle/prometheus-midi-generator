@@ -33,7 +33,7 @@ type midiinfo struct {
 	MIDIOutputStream *portmidi.Stream
 }
 
-func (midiEmitter *midiinfo) NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *midiinfo {
+func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *midiinfo {
 
 	midiProcessor := midiinfo{controlChannel, inputChannel, 2, nil}
 	portmidi.Initialize()
@@ -42,9 +42,7 @@ func (midiEmitter *midiinfo) NewMidi(controlChannel <-chan MidiControlMessage, i
 	if err != nil {
 		log.Fatal(err)
 	}
-	midiEmitter.MIDIOutputStream = out
-
-	//out.Close()
+	midiProcessor.MIDIOutputStream = out
 
 	return &midiProcessor
 }
