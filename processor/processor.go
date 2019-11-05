@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"prometheus-midi-generator/midioutput"
+
 	"time"
 )
 
@@ -41,7 +42,7 @@ type ScaleTheory struct {
 }
 
 const DEFAULT_BPM = 60
-const DEFAULT_TICK = 500
+const DEFAULT_TICK = 250
 
 type processor struct {
 	control <-chan ControlMessage

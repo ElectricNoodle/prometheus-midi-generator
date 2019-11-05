@@ -10,32 +10,33 @@ import (
 	"github.com/golang-collections/go-datastructures/queue"
 )
 
-type Metric struct {
-	Instance string
-	Job      string
+type metric struct {
+	instance string
+	job      string
 }
 
-type Point struct {
-	Timestamp int64
-	Value     float64
+type point struct {
+	timestamp int64
+	value     float64
 }
 
-type TimeSeries struct {
-	Metric Metric
-	Values []Point
+type timeSeries struct {
+	m      metric
+	values []point
 }
 
-type PrometheusData struct {
-	ResultType string
-	Result     []TimeSeries
+type prometheusData struct {
+	resultType string
+	result     []timeSeries
 }
 
-type APIResponse struct {
-	Status string
-	Data   PrometheusData
+type apiResponse struct {
+	status string
+	data   prometheusData
 }
 
-type prometheusScraper struct {
+/*Scraper Holds all relevant variables for scraping Promthetheus.*/
+type Scraper struct {
 	Target     string
 	output     chan<- float64
 	control    <-chan ControlMessage
@@ -45,13 +46,15 @@ type prometheusScraper struct {
 	outputRate int
 }
 
-const RING_SIZE = 10000
+const defaultRingSize = 10000
 
-const DEFAULT_POLL_RATE = 10000
-const DEFAULT_OUTPUT_RATE = 100
+const defaultPollRate = 10000
+const defaulttOutputRate = 100
 
+/*MessageType The type of Control Message being sent. */
 type MessageType int
 
+/* Message Types for Control Messages1 */
 const (
 	StartOutput      MessageType = 0
 	StopOutput       MessageType = 1
@@ -59,14 +62,17 @@ const (
 	ChangeOutputRate MessageType = 3
 )
 
+/*OutputType The type of output to use.*/
 type OutputType int
 
+/* Constants for Output Mode. */
 const (
 	Playback OutputType = 0
 	Live     OutputType = 1
 	Init     OutputType = -1
 )
 
+/*QueryInfo Information used to store information on query being used to scrape metric values.*/
 type QueryInfo struct {
 	Query string
 	Start float64
@@ -74,6 +80,7 @@ type QueryInfo struct {
 	Step  int
 }
 
+/*ControlMessage Message used to change behaviour of Prometheus scraper.*/
 type ControlMessage struct {
 	Type       MessageType
 	OutputType OutputType
@@ -81,7 +88,7 @@ type ControlMessage struct {
 	Value      int
 }
 
-func (tp *Point) UnmarshalJSON(data []byte) error {
+func (tp *point) unmarshalJSON(data []byte) error {
 
 	var v []interface{}
 
@@ -90,22 +97,23 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	tp.Timestamp = int64(v[0].(float64))
-	tp.Value, _ = strconv.ParseFloat(v[1].(string), 64)
+	tp.timestamp = int64(v[0].(float64))
+	tp.value, _ = strconv.ParseFloat(v[1].(string), 64)
 
 	return nil
 }
 
-func NewPrometheusScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *prometheusScraper {
+/*NewScraper Initializes a new instance of the scraper struct and starts the control thread. */
+func NewScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *Scraper {
 
-	prometheusScraper := prometheusScraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(RING_SIZE), DEFAULT_POLL_RATE, DEFAULT_OUTPUT_RATE}
-	go prometheusScraper.prometheusControlThread()
+	Scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate}
+	go Scraper.prometheusControlThread()
 
-	return &prometheusScraper
+	return &Scraper
 }
 
 /* This function listens for any incoming messages and handles them accordingly */
-func (collector *prometheusScraper) prometheusControlThread() {
+func (collector *Scraper) prometheusControlThread() {
 	for {
 
 		message := <-collector.control
@@ -138,7 +146,7 @@ func (collector *prometheusScraper) prometheusControlThread() {
 }
 
 /*  Stores the initial time series data, starts the output thread, and also the live playback query thread if required. */
-func (collector *prometheusScraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
+func (collector *Scraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
 
 	data := collector.getTimeSeriesData(query, start, end, step)
 	collector.populateRingBuffer(data)
@@ -154,7 +162,7 @@ func (collector *prometheusScraper) queryPrometheus(mode OutputType, query strin
 }
 
 /* Gets the next item from the RingBuffer and emits it on the output channel. Then sleeps for a configurable duration. */
-func (collector *prometheusScraper) outputThread() {
+func (collector *Scraper) outputThread() {
 	for {
 
 		item, err := collector.data.Get()
@@ -170,7 +178,7 @@ func (collector *prometheusScraper) outputThread() {
 }
 
 /* Queries for latest TimeSeries data, and sleeps for configurable duration. */
-func (collector *prometheusScraper) queryThread(query string, step int) {
+func (collector *Scraper) queryThread(query string, step int) {
 	for {
 
 		now := float64(time.Now().Unix())
@@ -184,22 +192,22 @@ func (collector *prometheusScraper) queryThread(query string, step int) {
 	}
 }
 
-func (collector *prometheusScraper) populateRingBuffer(data []Point) {
+func (collector *Scraper) populateRingBuffer(data []point) {
 	for _, point := range data {
-		fmt.Printf("PromValue: %f\n", point.Value)
-		collector.data.Put(point.Value)
+		fmt.Printf("PromValue: %f\n", point.value)
+		collector.data.Put(point.value)
 	}
 }
 
 /* Returns an array of points which represent the timeseries data for the specified query.
    NOTE: Doesn't handle more than one set of time series (Result[0]), Will expand to handle it later.
 */
-func (collector *prometheusScraper) getTimeSeriesData(query string, start float64, end float64, step int) []Point {
+func (collector *Scraper) getTimeSeriesData(query string, start float64, end float64, step int) []point {
 	request, err := http.NewRequest("GET", collector.Target, nil)
 
 	if err != nil {
 		fmt.Printf("%s\n", err)
-		return []Point{}
+		return []point{}
 	}
 
 	q := request.URL.Query()
@@ -216,16 +224,22 @@ func (collector *prometheusScraper) getTimeSeriesData(query string, start float6
 	fmt.Printf("Query    %+v\n", request.URL.Query())
 
 	result, err := http.DefaultClient.Do(request)
+
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		return []point{}
+	}
+
 	defer result.Body.Close()
 
-	var apiResponse APIResponse
+	var apiResponse apiResponse
 
 	e := json.NewDecoder(result.Body).Decode(&apiResponse)
 
 	if e != nil {
 		fmt.Printf("%s\n", e)
-		return []Point{}
+		return []point{}
 	}
 	/* Need to check that return value is valid before returning. */
-	return apiResponse.Data.Result[0].Values
+	return apiResponse.data.result[0].values
 }
