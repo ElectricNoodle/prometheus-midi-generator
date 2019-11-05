@@ -22,13 +22,13 @@ func main() {
 
 	midiControlChannel := make(chan midioutput.MidiControlMessage, 3)
 
-	prometheusScraper := prometheus.NewPrometheusScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Live, prometheusControlChannel, prometheusOutputChannel)
+	prometheusScraper := prometheus.NewScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Live, prometheusControlChannel, prometheusOutputChannel)
 	prometheusProcessor := processor.NewProcessor(processorControlChannel, prometheusOutputChannel, processorOutputChannel)
 	midiOutput := midioutput.NewMidi(midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)
 	fmt.Printf("%f\n", prometheusProcessor.BPM)
-	fmt.Printf("%s\n", midiOutput.Port)
+	fmt.Printf("%d\n", midiOutput.Port)
 
 	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1571961600, 1571961600, 600}
 
