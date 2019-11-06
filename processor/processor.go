@@ -101,7 +101,7 @@ func (collector *Processor) setActiveScale(scale []string) {
 }
 
 func (collector *Processor) getNotes(offsets []int) []string {
-	var retNotes []string
+	retNotes := make([]string, len(offsets))
 
 	for i, offset := range offsets {
 		retNotes[i] = notes[offset]
@@ -112,7 +112,9 @@ func (collector *Processor) getNotes(offsets []int) []string {
 
 func (collector *Processor) initScaleTypes() {
 
+	collector.scaleTypes.ChromaticScale = make([]string, len(notes))
 	collector.scaleTypes.ChromaticScale = notes
+
 	collector.scaleTypes.Ionian = collector.getNotes(ionianOffsets)
 	collector.scaleTypes.Dorian = collector.getNotes(dorianOffsets)
 	collector.scaleTypes.Phrygian = collector.getNotes(phrygianOffsets)
@@ -169,6 +171,9 @@ func (collector *Processor) generationThread() {
 }
 
 func (collector *Processor) pushEvent(value float64) {
+
+	note := collector.activeScale[int(value)%len(collector.activeScale)]
+	fmt.Printf("Note: %s \n", note)
 
 }
 
