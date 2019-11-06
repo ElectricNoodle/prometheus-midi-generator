@@ -147,7 +147,7 @@ func (collector *Processor) generationThread() {
 		select {
 		case message := <-collector.input:
 			fmt.Printf("ProcessorValue: %f \n", message)
-
+			collector.pushEvent(message)
 			//collector.output <- message
 		default:
 			//fmt.Println("no message received")
@@ -166,6 +166,10 @@ func (collector *Processor) generationThread() {
 		}
 
 	}
+}
+
+func (collector *Processor) pushEvent(value float64) {
+
 }
 
 func (collector *Processor) tick() {
