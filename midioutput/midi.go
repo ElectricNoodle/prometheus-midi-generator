@@ -51,7 +51,7 @@ func (midiEmitter *midiinfo) midiEmitThread() {
 	for {
 		message := <-midiEmitter.input
 
-		fmt.Printf("ProcessorValue: %v \n", message)
+		fmt.Printf("MProcessorValue: %v \n", message)
 
 		midiEmitter.MIDIOutputStream.WriteShort(0x91, 60, 100)
 		midiEmitter.MIDIOutputStream.WriteShort(0x91, 64, 100)

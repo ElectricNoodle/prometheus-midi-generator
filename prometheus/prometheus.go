@@ -48,8 +48,8 @@ type Scraper struct {
 
 const defaultRingSize = 10000
 
-const defaultPollRate = 10000
-const defaulttOutputRate = 10000
+const defaultPollRate = 7000
+const defaulttOutputRate = 7000
 
 /*MessageType The type of Control Message being sent. */
 type MessageType int
@@ -182,7 +182,7 @@ func (collector *Scraper) queryThread(query string, step int) {
 	for {
 
 		now := float64(time.Now().Unix())
-		fmt.Printf("Polling for data..\n")
+		//	fmt.Printf("Polling for data..\n")
 
 		data := collector.getTimeSeriesData(query, now, now, step)
 		collector.populateRingBuffer(data)
@@ -194,7 +194,7 @@ func (collector *Scraper) queryThread(query string, step int) {
 
 func (collector *Scraper) populateRingBuffer(data []Point) {
 	for _, point := range data {
-		fmt.Printf("PromValue: %f\n", point.Value)
+		//fmt.Printf("PromValue: %f\n", point.Value)
 		collector.data.Put(point.Value)
 	}
 }
@@ -240,7 +240,6 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 		fmt.Printf("Error2: %s\n", e)
 		return []Point{}
 	}
-	fmt.Printf("%v\n", apiResponse)
 	/* Need to check that return value is valid before returning. */
 	return apiResponse.Data.Result[0].Values
 }

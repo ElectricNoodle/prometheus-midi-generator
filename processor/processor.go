@@ -59,16 +59,16 @@ type ControlMessage struct {
 }
 
 type scaleTheory struct {
-	ChromaticScale []string
-	Ionian         []string
-	Dorian         []string
-	Phrygian       []string
-	Mixolydian     []string
-	Aeolian        []string
-	Locrian        []string
+	Chromatic  []string
+	Ionian     []string
+	Dorian     []string
+	Phrygian   []string
+	Mixolydian []string
+	Aeolian    []string
+	Locrian    []string
 }
 
-const defaultBPM = 30
+const defaultBPM = 60
 const defaultTick = 250
 
 /*Processor Holds input/output info and generation parameters.*/
@@ -88,7 +88,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, scaleTheory{}, []string{}}
 
 	processor.initScaleTypes()
-	processor.setActiveScale(processor.scaleTypes.ChromaticScale)
+	processor.setActiveScale(processor.scaleTypes.Chromatic)
 
 	go processor.controlThread()
 	go processor.generationThread()
@@ -97,6 +97,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 }
 
 func (collector *Processor) setActiveScale(scale []string) {
+	fmt.Printf("Active Scale: %#v\n", scale)
 	collector.activeScale = scale
 }
 
@@ -112,8 +113,8 @@ func (collector *Processor) getNotes(offsets []int) []string {
 
 func (collector *Processor) initScaleTypes() {
 
-	collector.scaleTypes.ChromaticScale = make([]string, len(notes))
-	collector.scaleTypes.ChromaticScale = notes
+	collector.scaleTypes.Chromatic = make([]string, len(notes))
+	collector.scaleTypes.Chromatic = notes
 
 	collector.scaleTypes.Ionian = collector.getNotes(ionianOffsets)
 	collector.scaleTypes.Dorian = collector.getNotes(dorianOffsets)
@@ -122,7 +123,7 @@ func (collector *Processor) initScaleTypes() {
 	collector.scaleTypes.Aeolian = collector.getNotes(aeolianOffsets)
 	collector.scaleTypes.Locrian = collector.getNotes(locrianOffsets)
 
-	fmt.Printf("Chromatic: %v+ \n", collector.scaleTypes.ChromaticScale)
+	fmt.Printf("Chromatic: %v+ \n", collector.scaleTypes.Chromatic)
 	fmt.Printf("Ionian: %v+ \n", collector.scaleTypes.Ionian)
 	fmt.Printf("Dorian: %v+ \n", collector.scaleTypes.Dorian)
 	fmt.Printf("Phrygian: %v+ \n", collector.scaleTypes.Phrygian)
@@ -148,7 +149,7 @@ func (collector *Processor) generationThread() {
 
 		select {
 		case message := <-collector.input:
-			fmt.Printf("ProcessorValue: %f \n", message)
+			//fmt.Printf("ProcessorValue: %f \n", message)
 			collector.pushEvent(message)
 			//collector.output <- message
 		default:
