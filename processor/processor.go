@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"prometheus-midi-generator/midioutput"
-
 	"time"
 )
 
@@ -39,6 +38,8 @@ type event struct {
 	value     string
 }
 
+var events []event
+
 /*MessageType Defines the different type of Control Message.*/
 type MessageType int
 
@@ -66,7 +67,7 @@ type scaleTheory struct {
 	Locrian        [8]string
 }
 
-const defaultBPM = 60
+const defaultBPM = 30
 const defaultTick = 250
 
 type processor struct {
@@ -106,11 +107,15 @@ func (collector *processor) generationThread() {
 		case message := <-collector.input:
 			fmt.Printf("ProcessorValue: %f \n", message)
 		default:
-			fmt.Println("no message received")
+			//fmt.Println("no message received")
 
 			//tick = tick % ((collector.BPM / 60) * 1000)
-			fmt.Printf("Tick..%f\n", tick)
+			//fmt.Printf("Tick..%f\n", tick)
 			//time.Duration(value) * time.Millisecond
+
+			if tick == 0 {
+				fmt.Println("BEEP")
+			}
 
 			tick += float64(collector.Tick)
 			tick = math.Mod(tick, (60/collector.BPM)*1000)

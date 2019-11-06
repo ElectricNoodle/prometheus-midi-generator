@@ -29,8 +29,9 @@ func main() {
 	fmt.Printf("%s\n", prometheusScraper.Target)
 	fmt.Printf("%f\n", prometheusProcessor.BPM)
 	fmt.Printf("%d\n", midiOutput.Port)
+	//0:Array[1572469200,9216.632296877477]
 
-	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn[1|2]:9116\"}[12h])", 1571961600, 1571961600, 600}
+	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn1:9116\"}[12h])", 1573075902, 1573075902, 600}
 
 	messageStart := prometheus.ControlMessage{prometheus.StartOutput, prometheus.Live, queryInfo, 0}
 	messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
