@@ -17,8 +17,32 @@ var mixolydianOffsets = [8]int{0, 2, 4, 5, 7, 9, 10, 12}
 var aeolianOffsets = [8]int{0, 2, 3, 5, 7, 8, 10, 12}
 var locrianOffsets = [8]int{0, 1, 3, 5, 6, 8, 10, 12}
 
+type eventType int
+
+const (
+	note      eventType = 0
+	parameter eventType = 1
+)
+
+type eventState int
+
+const (
+	ready   eventState = 0
+	active  eventState = 1
+	stopped eventState = 2
+)
+
+type event struct {
+	eventType eventType
+	state     eventState
+	duration  int
+	value     string
+}
+
+/*MessageType Defines the different type of Control Message.*/
 type MessageType int
 
+/* Values for MessageType */
 const (
 	StartOutput      MessageType = 0
 	StopOutput       MessageType = 1
@@ -26,12 +50,13 @@ const (
 	ChangeOutputRate MessageType = 3
 )
 
+/*ControlMessage Used for sending control messages to processor.*/
 type ControlMessage struct {
 	Type  MessageType
 	Value float64
 }
 
-type ScaleTheory struct {
+type scaleTheory struct {
 	ChromaticScale [13]string
 	Ionian         [8]string
 	Dorian         [8]string
@@ -41,8 +66,8 @@ type ScaleTheory struct {
 	Locrian        [8]string
 }
 
-const DEFAULT_BPM = 60
-const DEFAULT_TICK = 250
+const defaultBPM = 60
+const defaultTick = 250
 
 type processor struct {
 	control <-chan ControlMessage
@@ -52,9 +77,10 @@ type processor struct {
 	Tick    time.Duration
 }
 
+/*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *processor {
 
-	processor := processor{controlChannel, inputChannel, outputChannel, DEFAULT_BPM, DEFAULT_TICK}
+	processor := processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick}
 
 	go processor.controlThread()
 	go processor.generationThread()
@@ -92,4 +118,8 @@ func (collector *processor) generationThread() {
 		}
 
 	}
+}
+
+func (collector *processor) tick() {
+
 }
