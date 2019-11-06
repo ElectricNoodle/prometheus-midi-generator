@@ -7,14 +7,15 @@ import (
 	"time"
 )
 
-var notes = [13]string{"CLow", "C#", "D", "D#", "E", "G", "F#", "G", "G#", "A", "A#", "B", "CHigh"}
+var notes = []string{"CLow", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "CHigh"}
 
-var ionianOffsets = [8]int{0, 1, 4, 5, 7, 9, 11, 12}
-var dorianOffsets = [8]int{0, 2, 3, 5, 7, 9, 10, 12}
-var phrygianOffsets = [8]int{0, 1, 3, 5, 7, 8, 10, 12}
-var mixolydianOffsets = [8]int{0, 2, 4, 5, 7, 9, 10, 12}
-var aeolianOffsets = [8]int{0, 2, 3, 5, 7, 8, 10, 12}
-var locrianOffsets = [8]int{0, 1, 3, 5, 6, 8, 10, 12}
+var chromaticOffsets = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+var ionianOffsets = []int{0, 1, 4, 5, 7, 9, 11, 12}
+var dorianOffsets = []int{0, 2, 3, 5, 7, 9, 10, 12}
+var phrygianOffsets = []int{0, 1, 3, 5, 7, 8, 10, 12}
+var mixolydianOffsets = []int{0, 2, 4, 5, 7, 9, 10, 12}
+var aeolianOffsets = []int{0, 2, 3, 5, 7, 8, 10, 12}
+var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12}
 
 type eventType int
 
@@ -58,30 +59,36 @@ type ControlMessage struct {
 }
 
 type scaleTheory struct {
-	ChromaticScale [13]string
-	Ionian         [8]string
-	Dorian         [8]string
-	Phrygian       [8]string
-	Mixolydian     [8]string
-	Aeolian        [8]string
-	Locrian        [8]string
+	ChromaticScale []string
+	Ionian         []string
+	Dorian         []string
+	Phrygian       []string
+	Mixolydian     []string
+	Aeolian        []string
+	Locrian        []string
 }
 
 const defaultBPM = 30
 const defaultTick = 250
 
-type processor struct {
-	control <-chan ControlMessage
-	input   <-chan float64
-	output  chan<- midioutput.MidiMessage
-	BPM     float64
-	Tick    time.Duration
+/*Processor Holds input/output info and generation parameters.*/
+type Processor struct {
+	control     <-chan ControlMessage
+	input       <-chan float64
+	output      chan<- midioutput.MidiMessage
+	BPM         float64
+	Tick        time.Duration
+	scaleTypes  scaleTheory
+	activeScale []string
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *processor {
+func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *Processor {
 
-	processor := processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick}
+	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, scaleTheory{}, []string{}}
+
+	processor.initScaleTypes()
+	processor.setActiveScale(processor.scaleTypes.ChromaticScale)
 
 	go processor.controlThread()
 	go processor.generationThread()
@@ -89,8 +96,42 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	return &processor
 }
 
+func (collector *Processor) setActiveScale(scale []string) {
+	collector.activeScale = scale
+}
+
+func (collector *Processor) getNotes(offsets []int) []string {
+	var retNotes []string
+
+	for i, offset := range offsets {
+		retNotes[i] = notes[offset]
+	}
+
+	return retNotes
+}
+
+func (collector *Processor) initScaleTypes() {
+
+	collector.scaleTypes.ChromaticScale = notes
+	collector.scaleTypes.Ionian = collector.getNotes(ionianOffsets)
+	collector.scaleTypes.Dorian = collector.getNotes(dorianOffsets)
+	collector.scaleTypes.Phrygian = collector.getNotes(phrygianOffsets)
+	collector.scaleTypes.Mixolydian = collector.getNotes(mixolydianOffsets)
+	collector.scaleTypes.Aeolian = collector.getNotes(aeolianOffsets)
+	collector.scaleTypes.Locrian = collector.getNotes(locrianOffsets)
+
+	fmt.Printf("Chromatic: %v+ \n", collector.scaleTypes.ChromaticScale)
+	fmt.Printf("Ionian: %v+ \n", collector.scaleTypes.Ionian)
+	fmt.Printf("Dorian: %v+ \n", collector.scaleTypes.Dorian)
+	fmt.Printf("Phrygian: %v+ \n", collector.scaleTypes.Phrygian)
+	fmt.Printf("Mixolydian: %v+ \n", collector.scaleTypes.Mixolydian)
+	fmt.Printf("Aeolian: %v+ \n", collector.scaleTypes.Aeolian)
+	fmt.Printf("Locrian: %v+ \n", collector.scaleTypes.Locrian)
+
+}
+
 /* This function listens for any incoming messages and handles them accordingly */
-func (collector *processor) controlThread() {
+func (collector *Processor) controlThread() {
 	for {
 		message := <-collector.control
 		fmt.Printf("TEST %f\n", message.Value)
@@ -98,7 +139,7 @@ func (collector *processor) controlThread() {
 	}
 }
 
-func (collector *processor) generationThread() {
+func (collector *Processor) generationThread() {
 	var tick float64
 	tick = 0
 	for {
@@ -106,6 +147,8 @@ func (collector *processor) generationThread() {
 		select {
 		case message := <-collector.input:
 			fmt.Printf("ProcessorValue: %f \n", message)
+
+			//collector.output <- message
 		default:
 			//fmt.Println("no message received")
 
@@ -125,6 +168,6 @@ func (collector *processor) generationThread() {
 	}
 }
 
-func (collector *processor) tick() {
+func (collector *Processor) tick() {
 
 }
