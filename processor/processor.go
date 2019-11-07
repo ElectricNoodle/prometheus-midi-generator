@@ -20,16 +20,16 @@ var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12}
 type eventType int
 
 const (
-	note      eventType = 0
-	parameter eventType = 1
+	Note      eventType = 0
+	Parameter eventType = 1
 )
 
 type eventState int
 
 const (
-	ready   eventState = 0
-	active  eventState = 1
-	stopped eventState = 2
+	ready  eventState = 0
+	active eventState = 1
+	stop   eventState = 2
 )
 
 type event struct {
@@ -38,8 +38,6 @@ type event struct {
 	duration  int
 	value     string
 }
-
-var events []event
 
 /*MessageType Defines the different type of Control Message.*/
 type MessageType int
@@ -68,6 +66,7 @@ type scaleTheory struct {
 	Locrian    []string
 }
 
+const maxEvents = 10
 const defaultBPM = 60
 const defaultTick = 250
 
@@ -80,15 +79,18 @@ type Processor struct {
 	Tick        time.Duration
 	scaleTypes  scaleTheory
 	activeScale []string
+	events      []event
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *Processor {
 
-	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, scaleTheory{}, []string{}}
+	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, scaleTheory{}, []string{}, []event{}}
 
 	processor.initScaleTypes()
 	processor.setActiveScale(processor.scaleTypes.Chromatic)
+
+	processor.events = make([]event, maxEvents)
 
 	go processor.controlThread()
 	go processor.generationThread()
@@ -96,12 +98,15 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	return &processor
 }
 
-func (collector *Processor) setActiveScale(scale []string) {
+func (processor *Processor) setActiveScale(scale []string) {
+
 	fmt.Printf("Active Scale: %#v\n", scale)
-	collector.activeScale = scale
+	processor.activeScale = scale
+
 }
 
-func (collector *Processor) getNotes(offsets []int) []string {
+func (processor *Processor) getNotes(offsets []int) []string {
+
 	retNotes := make([]string, len(offsets))
 
 	for i, offset := range offsets {
@@ -111,73 +116,117 @@ func (collector *Processor) getNotes(offsets []int) []string {
 	return retNotes
 }
 
-func (collector *Processor) initScaleTypes() {
+func (processor *Processor) initScaleTypes() {
 
-	collector.scaleTypes.Chromatic = make([]string, len(notes))
-	collector.scaleTypes.Chromatic = notes
+	processor.scaleTypes.Chromatic = make([]string, len(notes))
+	processor.scaleTypes.Chromatic = notes
 
-	collector.scaleTypes.Ionian = collector.getNotes(ionianOffsets)
-	collector.scaleTypes.Dorian = collector.getNotes(dorianOffsets)
-	collector.scaleTypes.Phrygian = collector.getNotes(phrygianOffsets)
-	collector.scaleTypes.Mixolydian = collector.getNotes(mixolydianOffsets)
-	collector.scaleTypes.Aeolian = collector.getNotes(aeolianOffsets)
-	collector.scaleTypes.Locrian = collector.getNotes(locrianOffsets)
+	processor.scaleTypes.Ionian = processor.getNotes(ionianOffsets)
+	processor.scaleTypes.Dorian = processor.getNotes(dorianOffsets)
+	processor.scaleTypes.Phrygian = processor.getNotes(phrygianOffsets)
+	processor.scaleTypes.Mixolydian = processor.getNotes(mixolydianOffsets)
+	processor.scaleTypes.Aeolian = processor.getNotes(aeolianOffsets)
+	processor.scaleTypes.Locrian = processor.getNotes(locrianOffsets)
 
-	fmt.Printf("Chromatic: %v+ \n", collector.scaleTypes.Chromatic)
-	fmt.Printf("Ionian: %v+ \n", collector.scaleTypes.Ionian)
-	fmt.Printf("Dorian: %v+ \n", collector.scaleTypes.Dorian)
-	fmt.Printf("Phrygian: %v+ \n", collector.scaleTypes.Phrygian)
-	fmt.Printf("Mixolydian: %v+ \n", collector.scaleTypes.Mixolydian)
-	fmt.Printf("Aeolian: %v+ \n", collector.scaleTypes.Aeolian)
-	fmt.Printf("Locrian: %v+ \n", collector.scaleTypes.Locrian)
+	fmt.Printf("Chromatic: %v+ \n", processor.scaleTypes.Chromatic)
+	fmt.Printf("Ionian: %v+ \n", processor.scaleTypes.Ionian)
+	fmt.Printf("Dorian: %v+ \n", processor.scaleTypes.Dorian)
+	fmt.Printf("Phrygian: %v+ \n", processor.scaleTypes.Phrygian)
+	fmt.Printf("Mixolydian: %v+ \n", processor.scaleTypes.Mixolydian)
+	fmt.Printf("Aeolian: %v+ \n", processor.scaleTypes.Aeolian)
+	fmt.Printf("Locrian: %v+ \n", processor.scaleTypes.Locrian)
 
 }
 
 /* This function listens for any incoming messages and handles them accordingly */
-func (collector *Processor) controlThread() {
+func (processor *Processor) controlThread() {
+
 	for {
-		message := <-collector.control
+		message := <-processor.control
 		fmt.Printf("TEST %f\n", message.Value)
 
 	}
 }
 
-func (collector *Processor) generationThread() {
+func (processor *Processor) generationThread() {
+
 	var tick float64
 	tick = 0
 	for {
 
 		select {
-		case message := <-collector.input:
+		case message := <-processor.input:
 			//fmt.Printf("ProcessorValue: %f \n", message)
-			collector.pushEvent(message)
-			//collector.output <- message
+			processor.processMessage(message)
+			//processor.output <- message
 		default:
 			//fmt.Println("no message received")
 
-			//tick = tick % ((collector.BPM / 60) * 1000)
+			//tick = tick % ((processor.BPM / 60) * 1000)
 			//fmt.Printf("Tick..%f\n", tick)
 			//time.Duration(value) * time.Millisecond
 
 			if tick == 0 {
+
+				for i, e := range processor.events {
+
+					if (event{}) != e {
+
+						if e.state == ready {
+
+							fmt.Printf("Send start %s\n", e.value)
+							processor.events[i].state = active
+							//e.state = active
+
+						} else if e.state == active {
+
+							processor.events[i].duration--
+
+							if e.duration == 0 {
+								processor.events[i].state = stop
+								fmt.Printf("Send stop %s\n", e.value)
+							}
+
+						} else if e.state == stop {
+							processor.events[i] = event{}
+						}
+					}
+				}
 				fmt.Println("BEEP")
 			}
 
-			tick += float64(collector.Tick)
-			tick = math.Mod(tick, (60/collector.BPM)*1000)
-			time.Sleep(collector.Tick * time.Millisecond)
+			tick += float64(processor.Tick)
+			tick = math.Mod(tick, (60/processor.BPM)*1000)
+			time.Sleep(processor.Tick * time.Millisecond)
 		}
 
 	}
 }
 
-func (collector *Processor) pushEvent(value float64) {
+/*
+	eventType eventType
+	state     eventState
+	duration  int
+	value     string
+*/
+func (processor *Processor) processMessage(value float64) {
 
-	note := collector.activeScale[int(value)%len(collector.activeScale)]
-	fmt.Printf("Note: %s \n", note)
+	note := processor.activeScale[int(value)%len(processor.activeScale)]
+	event := event{Note, ready, 2, note}
+	processor.insertEvent(event)
+	//fmt.Printf("Note: %s \n", note)
 
 }
 
-func (collector *Processor) tick() {
+func (processor *Processor) insertEvent(eventIn event) {
+	for i, e := range processor.events {
+		if (event{}) == e {
+			processor.events[i] = eventIn
+			break
+		}
+	}
+}
+
+func (processor *Processor) tick() {
 
 }
