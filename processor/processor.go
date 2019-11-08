@@ -160,11 +160,6 @@ func (processor *Processor) generationThread() {
 			processor.processMessage(message)
 			//processor.output <- message
 		default:
-			//fmt.Println("no message received")
-
-			//tick = tick % ((processor.BPM / 60) * 1000)
-			//fmt.Printf("Tick..%f\n", tick)
-			//time.Duration(value) * time.Millisecond
 
 			if tick == 0 {
 
@@ -212,7 +207,7 @@ func (processor *Processor) generationThread() {
 func (processor *Processor) processMessage(value float64) {
 
 	note := processor.activeScale[int(value)%len(processor.activeScale)]
-	event := event{Note, ready, 2, note}
+	event := event{Note, ready, 1, note}
 	processor.insertEvent(event)
 	//fmt.Printf("Note: %s \n", note)
 
