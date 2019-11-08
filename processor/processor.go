@@ -152,41 +152,18 @@ func (processor *Processor) generationThread() {
 
 	var tick float64
 	tick = 0
+
 	for {
 
 		select {
 		case message := <-processor.input:
-			//fmt.Printf("ProcessorValue: %f \n", message)
+
 			processor.processMessage(message)
-			//processor.output <- message
+
 		default:
 
 			if tick == 0 {
-
-				for i, e := range processor.events {
-
-					if (event{}) != e {
-
-						if e.state == ready {
-
-							fmt.Printf("Send start %s\n", e.value)
-							processor.events[i].state = active
-							//e.state = active
-
-						} else if e.state == active {
-
-							processor.events[i].duration--
-
-							if e.duration == 0 {
-								processor.events[i].state = stop
-								fmt.Printf("Send stop %s\n", e.value)
-							}
-
-						} else if e.state == stop {
-							processor.events[i] = event{}
-						}
-					}
-				}
+				processor.handleEvents()
 				fmt.Println("BEEP")
 			}
 
@@ -198,19 +175,39 @@ func (processor *Processor) generationThread() {
 	}
 }
 
-/*
-	eventType eventType
-	state     eventState
-	duration  int
-	value     string
-*/
 func (processor *Processor) processMessage(value float64) {
 
 	note := processor.activeScale[int(value)%len(processor.activeScale)]
-	event := event{Note, ready, 1, note}
+	event := event{Note, ready, 2, note}
 	processor.insertEvent(event)
-	//fmt.Printf("Note: %s \n", note)
 
+}
+
+func (processor *Processor) handleEvents() {
+
+	for i, e := range processor.events {
+
+		if (event{}) != e {
+
+			if e.state == ready {
+
+				fmt.Printf("Send start %s\n", e.value)
+				processor.events[i].state = active
+
+			} else if e.state == active {
+
+				processor.events[i].duration--
+
+				if e.duration == 1 {
+					processor.events[i].state = stop
+					fmt.Printf("Send stop %s\n", e.value)
+				}
+
+			} else if e.state == stop {
+				processor.events[i] = event{}
+			}
+		}
+	}
 }
 
 func (processor *Processor) insertEvent(eventIn event) {

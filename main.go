@@ -43,15 +43,4 @@ func main() {
 		time.Sleep(2000 * time.Millisecond)
 	}
 
-	/*
-		w := app.NewWindow("Hello")
-		w.SetContent(widget.NewVBox(
-			widget.NewLabel("Hello Fyne!"),
-			widget.NewButton("Quit", func() {
-				app.Quit()
-			}),
-		))
-
-		w.ShowAndRun()
-	*/
 }
