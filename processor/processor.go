@@ -77,7 +77,8 @@ type Processor struct {
 	input       <-chan float64
 	output      chan<- midioutput.MidiMessage
 	BPM         float64
-	Tick        time.Duration
+	TickInc     time.Duration
+	tick        float64
 	scaleTypes  scaleTheory
 	activeScale []string
 	events      []event
@@ -86,7 +87,7 @@ type Processor struct {
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *Processor {
 
-	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, scaleTheory{}, []string{}, []event{}}
+	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTheory{}, []string{}, []event{}}
 
 	processor.initScaleTypes()
 	processor.setActiveScale(processor.scaleTypes.Chromatic)
@@ -151,8 +152,7 @@ func (processor *Processor) controlThread() {
 
 func (processor *Processor) generationThread() {
 
-	var tick float64
-	tick = 0
+	processor.tick = 0
 
 	for {
 
@@ -165,14 +165,11 @@ func (processor *Processor) generationThread() {
 		default:
 
 			/* Means we're on the beat. */
-			if tick == 0 {
+			if processor.tick == 0 {
 				processor.handleEvents()
 				fmt.Println("BEEP")
 			}
-
-			tick += float64(processor.Tick)
-			tick = math.Mod(tick, (60/processor.BPM)*1000)
-			time.Sleep(processor.Tick * time.Millisecond)
+			processor.incrementTick()
 		}
 
 	}
@@ -195,6 +192,7 @@ func (processor *Processor) handleEvents() {
 			if e.state == ready {
 
 				fmt.Printf("Send start %s Oct: %d \n", e.value, e.octave)
+
 				processor.events[i].state = active
 				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 50}
 
@@ -205,6 +203,7 @@ func (processor *Processor) handleEvents() {
 				if e.duration == 1 {
 
 					fmt.Printf("Send stop %s Oct: %d \n", e.value, e.octave)
+
 					processor.events[i].state = stop
 					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.events[i].value, processor.events[i].octave, 50}
 
@@ -224,8 +223,13 @@ func (processor *Processor) insertEvent(eventIn event) {
 			break
 		}
 	}
+
 }
 
-func (processor *Processor) tick() {
+func (processor *Processor) incrementTick() {
+
+	processor.tick += float64(processor.TickInc)
+	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
+	time.Sleep(processor.TickInc * time.Millisecond)
 
 }
