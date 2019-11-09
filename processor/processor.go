@@ -19,6 +19,7 @@ var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12}
 
 type eventType int
 
+/* Used fpr defining event types in MidiMessages */
 const (
 	Note      eventType = 0
 	Parameter eventType = 1

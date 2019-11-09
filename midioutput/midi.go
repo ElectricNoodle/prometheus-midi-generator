@@ -5,22 +5,24 @@ import (
 	//"github.com/rakyll/portmidi"
 )
 
-type OctaveOffset int
+type octaveOffset int
 
+/* */
 const (
-	Octave0 OctaveOffset = 12
-	Octave1 OctaveOffset = 24
-	Octave2 OctaveOffset = 36
-	Octave3 OctaveOffset = 48
-	Octave4 OctaveOffset = 60
-	Octave5 OctaveOffset = 72
-	Octave6 OctaveOffset = 84
-	Octave7 OctaveOffset = 96
-	Octave8 OctaveOffset = 108
+	Octave0 octaveOffset = 12
+	Octave1 octaveOffset = 24
+	Octave2 octaveOffset = 36
+	Octave3 octaveOffset = 48
+	Octave4 octaveOffset = 60
+	Octave5 octaveOffset = 72
+	Octave6 octaveOffset = 84
+	Octave7 octaveOffset = 96
+	Octave8 octaveOffset = 108
 )
 
-var octaveOffsets = []OctaveOffset{Octave0, Octave1, Octave2, Octave3, Octave4, Octave5, Octave6, Octave7, Octave8}
+var octaveOffsets = []octaveOffset{Octave0, Octave1, Octave2, Octave3, Octave4, Octave5, Octave6, Octave7, Octave8}
 
+/*MessageType Used to define consts for different MIDI events.*/
 type MessageType int
 
 /* Midi consts for message types */
@@ -47,6 +49,7 @@ const (
 	ControlChange MessageType = 2
 )
 
+/*MidiMessage Hold all of the information required to build a MIDI message, recieved from processor.go*/
 type MidiMessage struct {
 	Channel  MessageType
 	Type     MessageType
@@ -54,20 +57,24 @@ type MidiMessage struct {
 	Octave   int
 	Velocity int
 }
+
+/*MidiControlMessage Used to store information on control messages recieved. */
 type MidiControlMessage struct {
 	Value int
 }
 
-type midiinfo struct {
+/*MidiInfo Holds relevant info needed to recieve input/emit midi messages. */
+type MidiInfo struct {
 	control <-chan MidiControlMessage
 	input   <-chan MidiMessage
 	Port    int
 	//MIDIOutputStream *portmidi.Stream
 }
 
-func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *midiinfo {
+/*NewMidi Returns a new instance of midi struct, and inits midi connection. */
+func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *MidiInfo {
 
-	midiProcessor := midiinfo{controlChannel, inputChannel, 2}
+	midiProcessor := MidiInfo{controlChannel, inputChannel, 2}
 	//portmidi.Initialize()
 	//out, err := portmidi.NewOutputStream(2, 1024, 0)
 
@@ -80,13 +87,13 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 	return &midiProcessor
 }
 
-func (midiEmitter *midiinfo) midiEmitThread() {
+func (midiEmitter *MidiInfo) midiEmitThread() {
 	for {
 		message := <-midiEmitter.input
 
 		fmt.Printf("MidiMessage: %v \n", message)
 		fmt.Printf("MessageType + Channel: 0x%x\n", message.Type+message.Channel)
-		fmt.Printf("Note: %d Octave: %d MIDINoteValue %d\n", message.Note, message.Octave, (int(octaveOffsets[message.Octave]) + (message.Note + 1)))
+		fmt.Printf("Note: %d Octave: %d MIDINoteValue %d\n", message.Note, message.Octave, (int(octaveOffsets[message.Octave]) + message.Note))
 		/*midiEmitter.MIDIOutputStream.WriteShort(0x91, 60, 100)
 		midiEmitter.MIDIOutputStream.WriteShort(0x91, 64, 100)
 		midiEmitter.MIDIOutputStream.WriteShort(0x91, 67, 100)
