@@ -36,7 +36,7 @@ type event struct {
 	eventType eventType
 	state     eventState
 	duration  int
-	value     string
+	value     int
 	octave    int
 }
 
@@ -167,7 +167,7 @@ func (processor *Processor) generationThread() {
 			/* Means we're on the beat. */
 			if processor.tick == 0 {
 				processor.handleEvents()
-				fmt.Println("BEEP")
+				fmt.Println("Boop")
 			}
 			processor.incrementTick()
 		}
@@ -177,8 +177,8 @@ func (processor *Processor) generationThread() {
 
 func (processor *Processor) processMessage(value float64) {
 
-	note := processor.activeScale[int(value)%len(processor.activeScale)]
-	event := event{Note, ready, 2, note, 4}
+	noteIndex := int(value) % len(processor.activeScale)
+	event := event{Note, ready, 2, noteIndex, 4}
 	processor.insertEvent(event)
 
 }
@@ -191,10 +191,10 @@ func (processor *Processor) handleEvents() {
 
 			if e.state == ready {
 
-				fmt.Printf("Send start %s Oct: %d \n", e.value, e.octave)
+				fmt.Printf("Send start %s Oct: %d \n", processor.activeScale[e.value], e.octave)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 50}
+				processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 50}
 
 			} else if e.state == active {
 
@@ -202,10 +202,10 @@ func (processor *Processor) handleEvents() {
 
 				if e.duration == 1 {
 
-					fmt.Printf("Send stop %s Oct: %d \n", e.value, e.octave)
+					fmt.Printf("Send stop %s Oct: %d \n", processor.activeScale[e.value], e.octave)
 
 					processor.events[i].state = stop
-					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.events[i].value, processor.events[i].octave, 50}
+					processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOff, processor.events[i].value, processor.events[i].octave, 50}
 
 				}
 
