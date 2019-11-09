@@ -20,6 +20,7 @@ type MidiMessage struct {
 	Channel  int
 	Type     MessageType
 	Note     string
+	Octave   int
 	Velocity int
 }
 type MidiControlMessage struct {
@@ -42,6 +43,7 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	midiProcessor.MIDIOutputStream = out
 
 	return &midiProcessor
