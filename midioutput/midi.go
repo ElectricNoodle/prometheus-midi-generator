@@ -92,19 +92,8 @@ func (midiEmitter *MidiInfo) midiEmitThread() {
 		message := <-midiEmitter.input
 
 		fmt.Printf("MidiMessage: %v \n", message)
-		fmt.Printf("MessageType + Channel: 0x%x\n", message.Type+message.Channel)
-		fmt.Printf("Note: %d Octave: %d MIDINoteValue %d\n", message.Note, message.Octave, (int(octaveOffsets[message.Octave]) + message.Note))
-		/*midiEmitter.MIDIOutputStream.WriteShort(0x91, 60, 100)
-		midiEmitter.MIDIOutputStream.WriteShort(0x91, 64, 100)
-		midiEmitter.MIDIOutputStream.WriteShort(0x91, 67, 100)
-
-		// notes will be sustained for 2 seconds
-		time.Sleep(2 * time.Second)
-
-		// note off events
-		midiEmitter.MIDIOutputStream.WriteShort(0x81, 60, 100)
-		midiEmitter.MIDIOutputStream.WriteShort(0x81, 64, 100)
-		midiEmitter.MIDIOutputStream.WriteShort(0x81, 67, 100)
-		*/
+		fmt.Printf("MessageType + Channel: 0x%x ", message.Type+message.Channel)
+		fmt.Printf("MIDINoteValue %d Velocity %d \n", (int(octaveOffsets[message.Octave]) + message.Note), message.Velocity)
+		//midiEmitter.MIDIOutputStream.WriteShort((message.Type+message.Channel), message.Type+message.Channel,  message.Velocity)
 	}
 }

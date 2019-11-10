@@ -19,10 +19,9 @@ var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12}
 
 type eventType int
 
-/* Used fpr defining event types in MidiMessages */
 const (
-	Note      eventType = 0
-	Parameter eventType = 1
+	note      eventType = 0
+	parameter eventType = 1
 )
 
 type eventState int
@@ -165,37 +164,39 @@ func (processor *Processor) generationThread() {
 
 		default:
 
-			/* Means we're on the beat. */
 			if processor.tick == 0 {
+
 				processor.handleEvents()
-				fmt.Println("Boop")
+
 			}
+
 			processor.incrementTick()
+
 		}
 
 	}
 }
 
 func (processor *Processor) processMessage(value float64) {
-	fmt.Printf("Processor Metric Value:\t%f\tBinary: %b\n", value, math.Float64bits(value))
-	noteIndex := int(value) % len(processor.activeScale)
-	event := event{Note, ready, 2, noteIndex, 4}
+
+	noteVal := int(value) % len(processor.activeScale)
+	event := event{note, ready, 2, noteVal, 4}
 	processor.insertEvent(event)
 
 }
 
 func (processor *Processor) handleEvents() {
-
+	fmt.Println("BEEP")
 	for i, e := range processor.events {
 
 		if (event{}) != e {
 
 			if e.state == ready {
 
-				fmt.Printf("Send start %s Oct: %d \n", processor.activeScale[e.value], e.octave)
+				fmt.Printf("Send start %d Oct: %d \n", e.value, e.octave)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 50}
+				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 50}
 
 			} else if e.state == active {
 
@@ -203,10 +204,10 @@ func (processor *Processor) handleEvents() {
 
 				if e.duration == 1 {
 
-					fmt.Printf("Send stop %s Oct: %d \n", processor.activeScale[e.value], e.octave)
+					fmt.Printf("Send stop %s Oct: %d \n", e.value, e.octave)
 
 					processor.events[i].state = stop
-					processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOff, processor.events[i].value, processor.events[i].octave, 50}
+					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.events[i].value, processor.events[i].octave, 50}
 
 				}
 
