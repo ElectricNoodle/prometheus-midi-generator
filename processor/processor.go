@@ -177,7 +177,7 @@ func (processor *Processor) generationThread() {
 }
 
 func (processor *Processor) processMessage(value float64) {
-
+	fmt.Printf("Processor Metric Value: %f Binary: %b\n", value, math.Float64bits(value))
 	noteIndex := int(value) % len(processor.activeScale)
 	event := event{Note, ready, 2, noteIndex, 4}
 	processor.insertEvent(event)
