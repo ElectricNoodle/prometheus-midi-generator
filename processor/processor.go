@@ -58,7 +58,7 @@ type ControlMessage struct {
 	Value float64
 }
 
-type scaleTheory struct {
+type scaleTypes struct {
 	Chromatic  []string
 	Ionian     []string
 	Dorian     []string
@@ -80,7 +80,7 @@ type Processor struct {
 	BPM         float64
 	TickInc     time.Duration
 	tick        float64
-	scaleTypes  scaleTheory
+	scales      scaleTypes
 	activeScale []string
 	events      []event
 }
@@ -88,10 +88,10 @@ type Processor struct {
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *Processor {
 
-	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTheory{}, []string{}, []event{}}
+	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, []event{}}
 
 	processor.initScaleTypes()
-	processor.setActiveScale(processor.scaleTypes.Chromatic)
+	processor.setActiveScale(processor.scales.Chromatic)
 
 	processor.events = make([]event, maxEvents)
 
@@ -121,23 +121,23 @@ func (processor *Processor) getNotes(offsets []int) []string {
 
 func (processor *Processor) initScaleTypes() {
 
-	processor.scaleTypes.Chromatic = make([]string, len(notes))
-	processor.scaleTypes.Chromatic = notes
+	processor.scales.Chromatic = make([]string, len(notes))
+	processor.scales.Chromatic = notes
 
-	processor.scaleTypes.Ionian = processor.getNotes(ionianOffsets)
-	processor.scaleTypes.Dorian = processor.getNotes(dorianOffsets)
-	processor.scaleTypes.Phrygian = processor.getNotes(phrygianOffsets)
-	processor.scaleTypes.Mixolydian = processor.getNotes(mixolydianOffsets)
-	processor.scaleTypes.Aeolian = processor.getNotes(aeolianOffsets)
-	processor.scaleTypes.Locrian = processor.getNotes(locrianOffsets)
+	processor.scales.Ionian = processor.getNotes(ionianOffsets)
+	processor.scales.Dorian = processor.getNotes(dorianOffsets)
+	processor.scales.Phrygian = processor.getNotes(phrygianOffsets)
+	processor.scales.Mixolydian = processor.getNotes(mixolydianOffsets)
+	processor.scales.Aeolian = processor.getNotes(aeolianOffsets)
+	processor.scales.Locrian = processor.getNotes(locrianOffsets)
 
-	fmt.Printf("Chromatic: %v+ \n", processor.scaleTypes.Chromatic)
-	fmt.Printf("Ionian: %v+ \n", processor.scaleTypes.Ionian)
-	fmt.Printf("Dorian: %v+ \n", processor.scaleTypes.Dorian)
-	fmt.Printf("Phrygian: %v+ \n", processor.scaleTypes.Phrygian)
-	fmt.Printf("Mixolydian: %v+ \n", processor.scaleTypes.Mixolydian)
-	fmt.Printf("Aeolian: %v+ \n", processor.scaleTypes.Aeolian)
-	fmt.Printf("Locrian: %v+ \n", processor.scaleTypes.Locrian)
+	fmt.Printf("Chromatic: %v+ \n", processor.scales.Chromatic)
+	fmt.Printf("Ionian: %v+ \n", processor.scales.Ionian)
+	fmt.Printf("Dorian: %v+ \n", processor.scales.Dorian)
+	fmt.Printf("Phrygian: %v+ \n", processor.scales.Phrygian)
+	fmt.Printf("Mixolydian: %v+ \n", processor.scales.Mixolydian)
+	fmt.Printf("Aeolian: %v+ \n", processor.scales.Aeolian)
+	fmt.Printf("Locrian: %v+ \n", processor.scales.Locrian)
 
 }
 
@@ -177,7 +177,7 @@ func (processor *Processor) generationThread() {
 }
 
 func (processor *Processor) processMessage(value float64) {
-	fmt.Printf("Processor Metric Value: %f Binary: %b\n", value, math.Float64bits(value))
+	fmt.Printf("Processor Metric Value:\t%f\tBinary: %b\n", value, math.Float64bits(value))
 	noteIndex := int(value) % len(processor.activeScale)
 	event := event{Note, ready, 2, noteIndex, 4}
 	processor.insertEvent(event)
