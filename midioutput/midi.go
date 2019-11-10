@@ -2,7 +2,9 @@ package midioutput
 
 import (
 	"fmt"
-	//"github.com/rakyll/portmidi"
+	"log"
+
+	"github.com/rakyll/portmidi"
 )
 
 type octaveOffset int
@@ -55,7 +57,7 @@ type MidiMessage struct {
 	Type     MessageType
 	Note     int
 	Octave   int
-	Velocity int
+	Velocity int64
 }
 
 /*MidiControlMessage Used to store information on control messages recieved. */
@@ -65,24 +67,24 @@ type MidiControlMessage struct {
 
 /*MidiInfo Holds relevant info needed to recieve input/emit midi messages. */
 type MidiInfo struct {
-	control <-chan MidiControlMessage
-	input   <-chan MidiMessage
-	Port    int
-	//MIDIOutputStream *portmidi.Stream
+	control          <-chan MidiControlMessage
+	input            <-chan MidiMessage
+	port             int
+	midiOutputStream *portmidi.Stream
 }
 
 /*NewMidi Returns a new instance of midi struct, and inits midi connection. */
 func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *MidiInfo {
 
-	midiProcessor := MidiInfo{controlChannel, inputChannel, 2}
-	//portmidi.Initialize()
-	//out, err := portmidi.NewOutputStream(2, 1024, 0)
+	midiProcessor := MidiInfo{controlChannel, inputChannel, 2, nil}
+	portmidi.Initialize()
+	out, err := portmidi.NewOutputStream(2, 1024, 0)
 
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	//midiProcessor.MIDIOutputStream = out
+	midiProcessor.midiOutputStream = out
 	go midiProcessor.midiEmitThread()
 	return &midiProcessor
 }
@@ -94,6 +96,7 @@ func (midiEmitter *MidiInfo) midiEmitThread() {
 		fmt.Printf("MidiMessage: %v \n", message)
 		fmt.Printf("MessageType + Channel: 0x%x ", message.Type+message.Channel)
 		fmt.Printf("MIDINoteValue %d Velocity %d \n", (int(octaveOffsets[message.Octave]) + message.Note), message.Velocity)
-		//midiEmitter.MIDIOutputStream.WriteShort((message.Type+message.Channel), message.Type+message.Channel,  message.Velocity)
+
+		midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 	}
 }

@@ -180,8 +180,9 @@ func (processor *Processor) generationThread() {
 func (processor *Processor) processMessage(value float64) {
 
 	noteVal := int(value) % len(processor.activeScale)
-	event := event{note, ready, 2, noteVal, 4}
+	event := event{note, ready, 5, noteVal, 4}
 	processor.insertEvent(event)
+	fmt.Printf("Note: %s Value: %f \n", processor.activeScale[int(value)%len(processor.activeScale)], value)
 
 }
 
@@ -196,7 +197,7 @@ func (processor *Processor) handleEvents() {
 				fmt.Printf("Send start %d Oct: %d \n", e.value, e.octave)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 50}
+				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 80}
 
 			} else if e.state == active {
 
