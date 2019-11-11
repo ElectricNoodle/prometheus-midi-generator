@@ -1,7 +1,6 @@
 package midioutput
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/rakyll/portmidi"
@@ -92,10 +91,6 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 func (midiEmitter *MidiInfo) midiEmitThread() {
 	for {
 		message := <-midiEmitter.input
-
-		fmt.Printf("MidiMessage: %v \n", message)
-		fmt.Printf("MessageType + Channel: 0x%x ", message.Type+message.Channel)
-		fmt.Printf("MIDINoteValue %d Velocity %d \n", (int(octaveOffsets[message.Octave]) + message.Note), message.Velocity)
 
 		midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 	}

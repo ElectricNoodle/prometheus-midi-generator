@@ -22,7 +22,7 @@ func main() {
 
 	midiControlChannel := make(chan midioutput.MidiControlMessage, 3)
 
-	prometheusScraper := prometheus.NewScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Live, prometheusControlChannel, prometheusOutputChannel)
+	prometheusScraper := prometheus.NewScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
 	prometheusProcessor := processor.NewProcessor(processorControlChannel, prometheusOutputChannel, processorOutputChannel)
 	midiOutput := midioutput.NewMidi(midiControlChannel, processorOutputChannel)
 
@@ -31,7 +31,8 @@ func main() {
 	fmt.Printf("%v+\n", midiOutput)
 	//0:Array[1572469200,9216.632296877477]
 
-	queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn1:9116\"}[12h])", 1573075902, 1573075902, 600}
+	//queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn1:9116\"}[12h])", 1573075902, 1573075902, 600}
+	queryInfo := prometheus.QueryInfo{"pf_current_entries_total{instance=~\"sovapn1:9116\"}", 1573035902, 1573075902, 600}
 
 	messageStart := prometheus.ControlMessage{prometheus.StartOutput, prometheus.Live, queryInfo, 0}
 	//messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}

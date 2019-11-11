@@ -7,12 +7,31 @@ import (
 	"time"
 )
 
+type rootNote int
+
+/* Const indexes for note values at positions so code is more readable. NOTE: Removed CLow/CHigh concept, nnot sure if it's needed here. */
+const (
+	C      rootNote = 0
+	CSharp rootNote = 1
+	D      rootNote = 2
+	DSharp rootNote = 3
+	E      rootNote = 4
+	F      rootNote = 5
+	FSharp rootNote = 6
+	G      rootNote = 7
+	GSharp rootNote = 8
+	A      rootNote = 9
+	ASharp rootNote = 10
+	B      rootNote = 11
+)
+
 var notes = []string{"CLow", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "CHigh"}
 
 var chromaticOffsets = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-var ionianOffsets = []int{0, 1, 4, 5, 7, 9, 11, 12}
+var ionianOffsets = []int{0, 2, 4, 5, 7, 9, 11, 12}
 var dorianOffsets = []int{0, 2, 3, 5, 7, 9, 10, 12}
 var phrygianOffsets = []int{0, 1, 3, 5, 7, 8, 10, 12}
+var lydianOffsets = []int{0, 2, 4, 6, 7, 9, 11, 12}
 var mixolydianOffsets = []int{0, 2, 4, 5, 7, 9, 10, 12}
 var aeolianOffsets = []int{0, 2, 3, 5, 7, 8, 10, 12}
 var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12}
@@ -62,6 +81,7 @@ type scaleTypes struct {
 	Ionian     []string
 	Dorian     []string
 	Phrygian   []string
+	Lydian     []string
 	Mixolydian []string
 	Aeolian    []string
 	Locrian    []string
@@ -89,8 +109,8 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, []event{}}
 
-	processor.initScaleTypes()
-	processor.setActiveScale(processor.scales.Chromatic)
+	processor.initScaleTypes(D)
+	processor.activeScale = processor.scales.Ionian
 
 	processor.events = make([]event, maxEvents)
 
@@ -100,35 +120,29 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	return &processor
 }
 
-func (processor *Processor) setActiveScale(scale []string) {
-
-	fmt.Printf("Active Scale: %#v\n", scale)
-	processor.activeScale = scale
-
-}
-
-func (processor *Processor) getNotes(offsets []int) []string {
+func (processor *Processor) getNotes(rootOffset rootNote, offsets []int) []string {
 
 	retNotes := make([]string, len(offsets))
 
 	for i, offset := range offsets {
-		retNotes[i] = notes[offset]
+		retNotes[i] = notes[((int(rootOffset) + offset) % len(notes))]
 	}
 
 	return retNotes
 }
 
-func (processor *Processor) initScaleTypes() {
+func (processor *Processor) initScaleTypes(rootNoteIndex rootNote) {
 
 	processor.scales.Chromatic = make([]string, len(notes))
 	processor.scales.Chromatic = notes
 
-	processor.scales.Ionian = processor.getNotes(ionianOffsets)
-	processor.scales.Dorian = processor.getNotes(dorianOffsets)
-	processor.scales.Phrygian = processor.getNotes(phrygianOffsets)
-	processor.scales.Mixolydian = processor.getNotes(mixolydianOffsets)
-	processor.scales.Aeolian = processor.getNotes(aeolianOffsets)
-	processor.scales.Locrian = processor.getNotes(locrianOffsets)
+	processor.scales.Ionian = processor.getNotes(rootNoteIndex, ionianOffsets)
+	processor.scales.Dorian = processor.getNotes(rootNoteIndex, dorianOffsets)
+	processor.scales.Phrygian = processor.getNotes(rootNoteIndex, phrygianOffsets)
+	processor.scales.Mixolydian = processor.getNotes(rootNoteIndex, mixolydianOffsets)
+	processor.scales.Lydian = processor.getNotes(rootNoteIndex, lydianOffsets)
+	processor.scales.Aeolian = processor.getNotes(rootNoteIndex, aeolianOffsets)
+	processor.scales.Locrian = processor.getNotes(rootNoteIndex, locrianOffsets)
 
 	fmt.Printf("Chromatic: %v+ \n", processor.scales.Chromatic)
 	fmt.Printf("Ionian: %v+ \n", processor.scales.Ionian)
@@ -180,7 +194,7 @@ func (processor *Processor) generationThread() {
 func (processor *Processor) processMessage(value float64) {
 
 	noteVal := int(value) % len(processor.activeScale)
-	event := event{note, ready, 5, noteVal, 4}
+	event := event{note, ready, 4, noteVal, 4}
 	processor.insertEvent(event)
 	fmt.Printf("Note: %s Value: %f \n", processor.activeScale[int(value)%len(processor.activeScale)], value)
 
