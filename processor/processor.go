@@ -88,7 +88,7 @@ type scaleTypes struct {
 }
 
 const maxEvents = 10
-const defaultBPM = 60
+const defaultBPM = 120
 const defaultTick = 250
 
 /*Processor Holds input/output info and generation parameters.*/
@@ -111,7 +111,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
 
 	processor.initScaleTypes(C)
-	processor.activeScale = processor.scales.Ionian
+	processor.activeScale = processor.scales.Mixolydian
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
 
@@ -196,7 +196,7 @@ func (processor *Processor) processMessage(value float64) {
 }
 
 func (processor *Processor) handleEvents() {
-	fmt.Println("BEEP")
+
 	for i, e := range processor.events {
 
 		if (event{}) != e {
