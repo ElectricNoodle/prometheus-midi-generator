@@ -93,25 +93,26 @@ const defaultTick = 250
 
 /*Processor Holds input/output info and generation parameters.*/
 type Processor struct {
-	control     <-chan ControlMessage
-	input       <-chan float64
-	output      chan<- midioutput.MidiMessage
-	BPM         float64
-	TickInc     time.Duration
-	tick        float64
-	scales      scaleTypes
-	activeScale []string
-	events      []event
+	control        <-chan ControlMessage
+	input          <-chan float64
+	output         chan<- midioutput.MidiMessage
+	BPM            float64
+	TickInc        time.Duration
+	tick           float64
+	scales         scaleTypes
+	activeScale    []string
+	rootNoteOffset int
+	events         []event
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *Processor {
 
-	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, []event{}}
+	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
 
-	processor.initScaleTypes(D)
+	processor.initScaleTypes(C)
 	processor.activeScale = processor.scales.Ionian
-
+	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
 
 	go processor.controlThread()
@@ -121,7 +122,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 }
 
 func (processor *Processor) getNotes(rootOffset rootNote, offsets []int) []string {
-
+	fmt.Printf("RootOffset: %d \n", rootOffset)
 	retNotes := make([]string, len(offsets))
 
 	for i, offset := range offsets {
@@ -144,13 +145,7 @@ func (processor *Processor) initScaleTypes(rootNoteIndex rootNote) {
 	processor.scales.Aeolian = processor.getNotes(rootNoteIndex, aeolianOffsets)
 	processor.scales.Locrian = processor.getNotes(rootNoteIndex, locrianOffsets)
 
-	fmt.Printf("Chromatic: %v+ \n", processor.scales.Chromatic)
-	fmt.Printf("Ionian: %v+ \n", processor.scales.Ionian)
-	fmt.Printf("Dorian: %v+ \n", processor.scales.Dorian)
-	fmt.Printf("Phrygian: %v+ \n", processor.scales.Phrygian)
-	fmt.Printf("Mixolydian: %v+ \n", processor.scales.Mixolydian)
-	fmt.Printf("Aeolian: %v+ \n", processor.scales.Aeolian)
-	fmt.Printf("Locrian: %v+ \n", processor.scales.Locrian)
+	processor.rootNoteOffset = int(rootNoteIndex)
 
 }
 
@@ -208,10 +203,10 @@ func (processor *Processor) handleEvents() {
 
 			if e.state == ready {
 
-				fmt.Printf("Send start %d Oct: %d \n", e.value, e.octave)
+				fmt.Printf("Send start %d Oct: %d \n", e.value+processor.rootNoteOffset, e.octave)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.events[i].value, processor.events[i].octave, 80}
+				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 80}
 
 			} else if e.state == active {
 
@@ -222,7 +217,7 @@ func (processor *Processor) handleEvents() {
 					fmt.Printf("Send stop %s Oct: %d \n", e.value, e.octave)
 
 					processor.events[i].state = stop
-					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.events[i].value, processor.events[i].octave, 50}
+					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 50}
 
 				}
 
