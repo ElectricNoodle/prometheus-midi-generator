@@ -203,7 +203,7 @@ func (processor *Processor) handleEvents() {
 
 			if e.state == ready {
 
-				fmt.Printf("Send start %d Oct: %d \n", e.value+processor.rootNoteOffset, e.octave)
+				fmt.Printf("Send start %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 				processor.events[i].state = active
 				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 80}
@@ -214,7 +214,7 @@ func (processor *Processor) handleEvents() {
 
 				if e.duration == 1 {
 
-					fmt.Printf("Send stop %s Oct: %d \n", e.value, e.octave)
+					fmt.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
 					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 50}
