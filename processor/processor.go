@@ -25,7 +25,8 @@ const (
 	B      rootNote = 11
 )
 
-var notes = []string{"CLow", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "CHigh"}
+/* 3 octaves of Chromatic scale which allows for generation of any scale type with any root note */
+var notes = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C"}
 
 var chromaticOffsets = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 var ionianOffsets = []int{0, 2, 4, 5, 7, 9, 11, 12}
@@ -110,8 +111,8 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
 
-	processor.initScaleTypes(C)
-	processor.activeScale = processor.scales.Mixolydian
+	processor.initScaleTypes(G)
+	processor.activeScale = processor.scales.Ionian
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
 
@@ -189,7 +190,7 @@ func (processor *Processor) generationThread() {
 func (processor *Processor) processMessage(value float64) {
 
 	noteVal := int(value) % len(processor.activeScale)
-	event := event{note, ready, 4, noteVal, 4}
+	event := event{note, ready, 4, noteVal, 3}
 	processor.insertEvent(event)
 	fmt.Printf("Note: %s Value: %f \n", processor.activeScale[int(value)%len(processor.activeScale)], value)
 
