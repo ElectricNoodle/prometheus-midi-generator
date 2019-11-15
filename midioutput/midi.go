@@ -29,26 +29,27 @@ type MessageType int
 
 /* Midi consts for message types */
 const (
-	Channel1  MessageType = 0x01
-	Channel2  MessageType = 0x02
-	Channel3  MessageType = 0x03
-	Channel4  MessageType = 0x04
-	Channel5  MessageType = 0x05
-	Channel6  MessageType = 0x06
-	Channel7  MessageType = 0x07
-	Channel8  MessageType = 0x08
-	Channel9  MessageType = 0x09
-	Channel10 MessageType = 0x10
-	Channel11 MessageType = 0x11
-	Channel12 MessageType = 0x12
-	Channel13 MessageType = 0x13
-	Channel14 MessageType = 0x14
-	Channel15 MessageType = 0x15
+	Channel1  MessageType = 0x00
+	Channel2  MessageType = 0x01
+	Channel3  MessageType = 0x02
+	Channel4  MessageType = 0x03
+	Channel5  MessageType = 0x04
+	Channel6  MessageType = 0x05
+	Channel7  MessageType = 0x06
+	Channel8  MessageType = 0x07
+	Channel9  MessageType = 0x08
+	Channel10 MessageType = 0x09
+	Channel11 MessageType = 0x10
+	Channel12 MessageType = 0x11
+	Channel13 MessageType = 0x12
+	Channel14 MessageType = 0x13
+	Channel15 MessageType = 0x14
+	Channel16 MessageType = 0x15
 
 	NoteOn  MessageType = 0x90
 	NoteOff MessageType = 0x80
 
-	ControlChange MessageType = 2
+	//ControlChange MessageType = 2
 )
 
 /*MidiMessage Hold all of the information required to build a MIDI message, recieved from processor.go*/
@@ -92,7 +93,7 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 func (midiEmitter *MidiInfo) midiEmitThread() {
 	for {
 		message := <-midiEmitter.input
-		fmt.Printf("MiDINote: Not+Oct:%d Note:%d\n", int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+		fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
 		midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 	}
 }

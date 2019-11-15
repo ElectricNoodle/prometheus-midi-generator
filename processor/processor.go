@@ -111,7 +111,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
 
-	processor.initScaleTypes(G)
+	processor.initScaleTypes(B)
 	processor.activeScale = processor.scales.Ionian
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
@@ -207,7 +207,8 @@ func (processor *Processor) handleEvents() {
 				fmt.Printf("Send start %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{1, midioutput.NoteOn, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 80}
+
+				processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOn, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 80}
 
 			} else if e.state == active {
 
@@ -218,7 +219,7 @@ func (processor *Processor) handleEvents() {
 					fmt.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
-					processor.output <- midioutput.MidiMessage{1, midioutput.NoteOff, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 50}
+					processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOff, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 50}
 
 				}
 
