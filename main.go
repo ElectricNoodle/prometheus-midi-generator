@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"prometheus-midi-generator/gui"
+	"prometheus-midi-generator/gui/platforms"
+	"prometheus-midi-generator/gui/renderers"
 	"prometheus-midi-generator/midioutput"
 	"prometheus-midi-generator/processor"
 	"prometheus-midi-generator/prometheus"
-	"time"
-	//"fyne.io/fyne/widget"
-	//"fyne.io/fyne/app"
+
+	"github.com/inkyblackness/imgui-go"
 )
 
 func main() {
-
-	//app := app.New()
 
 	prometheusControlChannel := make(chan prometheus.ControlMessage, 3)
 	prometheusOutputChannel := make(chan float64, 3)
@@ -32,16 +33,32 @@ func main() {
 	//0:Array[1572469200,9216.632296877477]
 
 	//queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn1:9116\"}[12h])", 1573075902, 1573075902, 600}
-	queryInfo := prometheus.QueryInfo{"pf_current_entries_total{instance=~\"sovapn1:9116\"}", 1573035902, 1573075902, 600}
+	queryInfo := prometheus.QueryInfo{Query: "pf_current_entries_total{instance=~\"sovapn1:9116\"}", Start: 1573035902, End: 1573075902, Step: 600}
 
-	messageStart := prometheus.ControlMessage{prometheus.StartOutput, prometheus.Live, queryInfo, 0}
+	messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
 	//messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
 
 	prometheusControlChannel <- messageStart
 	//prometheusControlChannel <- messageStop
 
-	for {
-		time.Sleep(2000 * time.Millisecond)
+	context := imgui.CreateContext(nil)
+	defer context.Destroy()
+	io := imgui.CurrentIO()
+
+	platform, err := platforms.NewGLFW(io, platforms.GLFWClientAPIOpenGL3)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(-1)
 	}
+	defer platform.Dispose()
+
+	renderer, err := renderers.NewOpenGL3(io)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(-1)
+	}
+	defer renderer.Dispose()
+
+	gui.Run(platform, renderer)
 
 }

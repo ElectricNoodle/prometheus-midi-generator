@@ -89,7 +89,7 @@ type scaleTypes struct {
 }
 
 const maxEvents = 10
-const defaultBPM = 120
+const defaultBPM = 60
 const defaultTick = 250
 
 /*Processor Holds input/output info and generation parameters.*/
@@ -111,7 +111,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
 
-	processor.initScaleTypes(B)
+	processor.initScaleTypes(C)
 	processor.activeScale = processor.scales.Ionian
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
@@ -219,6 +219,7 @@ func (processor *Processor) handleEvents() {
 					fmt.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
+
 					processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOff, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 50}
 
 				}
@@ -241,7 +242,7 @@ func (processor *Processor) insertEvent(eventIn event) {
 }
 
 func (processor *Processor) incrementTick() {
-
+	fmt.Printf("Tick: %f \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
 	time.Sleep(processor.TickInc * time.Millisecond)
