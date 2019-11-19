@@ -106,10 +106,10 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 /*NewScraper Initializes a new instance of the scraper struct and starts the control thread. */
 func NewScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *Scraper {
 
-	Scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate}
-	go Scraper.prometheusControlThread()
+	scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate}
+	go scraper.prometheusControlThread()
 
-	return &Scraper
+	return &scraper
 }
 
 /* This function listens for any incoming messages and handles them accordingly */

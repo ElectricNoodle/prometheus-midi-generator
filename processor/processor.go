@@ -92,8 +92,8 @@ const maxEvents = 10
 const defaultBPM = 60
 const defaultTick = 250
 
-/*Processor Holds input/output info and generation parameters.*/
-type Processor struct {
+/*ProcInfo Holds input/output info and generation parameters.*/
+type ProcInfo struct {
 	control        <-chan ControlMessage
 	input          <-chan float64
 	output         chan<- midioutput.MidiMessage
@@ -107,9 +107,9 @@ type Processor struct {
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *Processor {
+func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
 
-	processor := Processor{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
+	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
 
 	processor.initScaleTypes(C)
 	processor.activeScale = processor.scales.Ionian
@@ -122,7 +122,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	return &processor
 }
 
-func (processor *Processor) getNotes(rootOffset rootNote, offsets []int) []string {
+func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string {
 	fmt.Printf("RootOffset: %d \n", rootOffset)
 	retNotes := make([]string, len(offsets))
 
@@ -133,7 +133,7 @@ func (processor *Processor) getNotes(rootOffset rootNote, offsets []int) []strin
 	return retNotes
 }
 
-func (processor *Processor) initScaleTypes(rootNoteIndex rootNote) {
+func (processor *ProcInfo) initScaleTypes(rootNoteIndex rootNote) {
 
 	processor.scales.Chromatic = make([]string, len(notes))
 	processor.scales.Chromatic = notes
@@ -151,7 +151,7 @@ func (processor *Processor) initScaleTypes(rootNoteIndex rootNote) {
 }
 
 /* This function listens for any incoming messages and handles them accordingly */
-func (processor *Processor) controlThread() {
+func (processor *ProcInfo) controlThread() {
 
 	for {
 		message := <-processor.control
@@ -160,7 +160,7 @@ func (processor *Processor) controlThread() {
 	}
 }
 
-func (processor *Processor) generationThread() {
+func (processor *ProcInfo) generationThread() {
 
 	processor.tick = 0
 
@@ -187,7 +187,7 @@ func (processor *Processor) generationThread() {
 	}
 }
 
-func (processor *Processor) processMessage(value float64) {
+func (processor *ProcInfo) processMessage(value float64) {
 
 	noteVal := int(value) % len(processor.activeScale)
 	event := event{note, ready, 4, noteVal, 3}
@@ -196,7 +196,7 @@ func (processor *Processor) processMessage(value float64) {
 
 }
 
-func (processor *Processor) handleEvents() {
+func (processor *ProcInfo) handleEvents() {
 
 	for i, e := range processor.events {
 
@@ -231,7 +231,7 @@ func (processor *Processor) handleEvents() {
 	}
 }
 
-func (processor *Processor) insertEvent(eventIn event) {
+func (processor *ProcInfo) insertEvent(eventIn event) {
 	for i, e := range processor.events {
 		if (event{}) == e {
 			processor.events[i] = eventIn
@@ -241,7 +241,7 @@ func (processor *Processor) insertEvent(eventIn event) {
 
 }
 
-func (processor *Processor) incrementTick() {
+func (processor *ProcInfo) incrementTick() {
 	fmt.Printf("Tick: %f \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
