@@ -73,10 +73,13 @@ func Run(p Platform, r Renderer) {
 
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
 		{
-			imgui.Begin("Hello, world!") // Create a window called "Hello, world!" and append into it.
+			imgui.Begin("Prometheus MIDI Generator") // Create a window called "Hello, world!" and append into it.
 
-			imgui.Text("This is some useful text.") // Display some text
+			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.") // Display some text
+			//imgui.BeginMenuBar()
+			//imgui.BeginMenu()
 
+			//imgui.EndMenuBar()
 			imgui.Checkbox("Demo Window", &showDemoWindow) // Edit bools storing our window open/close state
 			imgui.Checkbox("Another Window", &showAnotherWindow)
 
