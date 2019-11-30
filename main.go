@@ -31,7 +31,7 @@ func main() {
 
 	/* Test messages to set Query Info and Start playback. */
 	//queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn1:9116\"}[12h])", 1573075902, 1573075902, 600}
-	queryInfo := prometheus.QueryInfo{Query: "pf_current_entries_total{instance=~\"sovapn1:9116\"}", Start: 1573035902, End: 1573075902, Step: 600}
+	queryInfo := prometheus.QueryInfo{Query: "pf_current_entries_total{instance=~\"sovapn1:9116\"}", Start: 1574208000, End: 1574467200, Step: 600}
 
 	messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
 	//messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
@@ -67,7 +67,7 @@ func initializeGUI() {
 	defer context.Destroy()
 	io := imgui.CurrentIO()
 
-	platform, err := platforms.NewGLFW(io, platforms.GLFWClientAPIOpenGL3)
+	platform, err := platforms.NewGLFW(io, platforms.GLFWClientAPIOpenGL2)
 
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -76,7 +76,7 @@ func initializeGUI() {
 
 	defer platform.Dispose()
 
-	renderer, err := renderers.NewOpenGL3(io)
+	renderer, err := renderers.NewOpenGL2(io)
 
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -87,3 +87,41 @@ func initializeGUI() {
 
 	gui.Run(platform, renderer)
 }
+
+/*
+func initializeGUITwo() {
+
+	// Initialize GTK without parsing any command line arguments.
+	gtk.Init(nil)
+
+	// Create a new toplevel window, set its title, and connect it to the
+	// "destroy" signal to exit the GTK main loop when it is destroyed.
+	win, err := gtk.WindowNew(gtk.WINDOW_TOPLEVEL)
+	if err != nil {
+		log.Fatal("Unable to create window:", err)
+	}
+	win.SetTitle("Musical Creation/Exploration Tool")
+	win.Connect("destroy", func() {
+		gtk.MainQuit()
+	})
+
+	// Create a new label widget to show in the window.
+	l, err := gtk.LabelNew("Hello, gotk3!")
+	if err != nil {
+		log.Fatal("Unable to create label:", err)
+	}
+
+	// Add the label to the window.
+	win.Add(l)
+	// Set the default window size.
+	win.SetDefaultSize(800, 600)
+
+	// Recursively show all widgets contained in this window.
+	win.ShowAll()
+
+	// Begin executing the GTK main loop.  This blocks until
+	gtk.Main()
+	// gtk.MainQuit() is run.
+
+}
+*/

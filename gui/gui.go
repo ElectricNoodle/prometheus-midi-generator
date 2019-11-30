@@ -54,9 +54,31 @@ func Run(p Platform, r Renderer) {
 
 	showDemoWindow := false
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
-	f := float32(0.0)
-	counter := 0
+	//f := float32(0.0)
+	//counter := 0
 	showAnotherWindow := false
+
+	var pollRatePos int32
+	prometheusPollRate := 4000
+
+	metric := "pf_current_entries_total{instance=~'sovapn1:9116'}"
+
+	prometheusPollRates := []int{4000, 5000, 6000, 7000, 8000}
+	prometheusPollRatesString := []string{"4000", "5000", "6000", "7000", "8000"}
+
+	var processorKeysPos int32
+	processorKey := "C"
+	processorKeys := []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
+
+	var processorModePos int32
+	processorMode := "Chromatic"
+	processorModes := []string{"Chromatic", "Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"}
+
+	var processorGenerationTypePos int32
+	processorGenerationType := "Chromatic"
+	processorGenerationTypes := []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
+
+	fmt.Printf("Initl Config: %d %s %s %s\n", prometheusPollRate, processorKey, processorMode, processorGenerationType)
 
 	for !p.ShouldStop() {
 		p.ProcessEvents()
@@ -71,26 +93,76 @@ func Run(p Platform, r Renderer) {
 			imgui.ShowDemoWindow(&showDemoWindow)
 		}
 
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
 		{
-			imgui.Begin("Prometheus MIDI Generator") // Create a window called "Hello, world!" and append into it.
 
+			imgui.Begin("Prometheus MIDI Generator")                                             // Create a window called "Hello, world!" and append into it.
 			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.") // Display some text
-			//imgui.BeginMenuBar()
-			//imgui.BeginMenu()
-			//imgui.
-			//imgui.EndMenuBar()
-			imgui.Checkbox("Demo Window", &showDemoWindow) // Edit bools storing our window open/close state
-			imgui.Checkbox("Another Window", &showAnotherWindow)
+			imgui.Text("\t\t")
+			imgui.Separator()
+			imgui.Text("Prometheus Configuration:")
 
-			imgui.SliderFloat("float", &f, 0.0, 1.0) // Edit one float using a slider from 0.0f to 1.0f
-			// TODO add example of ColorEdit3 for clearColor
+			imgui.Text("\t")
 
-			if imgui.Button("Button") { // Buttons return true when clicked (most widgets return true when edited/activated)
-				counter++
+			imgui.Text("Metric:    ")
+			//imgui.SameLine()
+			imgui.InputText("", &metric)
+
+			imgui.Text("\t")
+
+			imgui.Text("Poll Rate (ms): ")
+			//	imgui.SameLine()
+			//imgui.SliderInt("", &prometheusPollRate, 1000, 10000) // Edit one float using a slider from 0.0f to 1.0f
+			if imgui.ListBoxV(" ", &pollRatePos, prometheusPollRatesString, 1) {
+				prometheusPollRate = prometheusPollRates[pollRatePos]
+			}
+
+			imgui.Text("\t")
+			if imgui.Button("Start") {
+
 			}
 			imgui.SameLine()
-			imgui.Text(fmt.Sprintf("counter = %d", counter))
+			imgui.Text(" ")
+			imgui.SameLine()
+			if imgui.Button("Stop") {
+
+			}
+
+			imgui.Text("\t")
+
+			imgui.Separator()
+			imgui.Text("Processor Options:")
+			imgui.Text("\t")
+
+			imgui.Text("Key:")
+			if imgui.ListBoxV("  ", &processorKeysPos, processorKeys, 1) {
+				processorKey = processorKeys[processorKeysPos]
+			}
+
+			imgui.Text("\t")
+
+			imgui.Text("Mode:")
+			if imgui.ListBoxV("   ", &processorModePos, processorModes, 1) {
+				processorMode = processorModes[processorModePos]
+			}
+
+			imgui.Text("\t")
+
+			imgui.Text("Type of Generation:")
+			if imgui.ListBoxV("    ", &processorGenerationTypePos, processorGenerationTypes, -1) {
+				processorGenerationType = processorGenerationTypes[processorModePos]
+			}
+			//imgui.EndMenuBar()
+			//imgui.Checkbox("Demo Window", &showDemoWindow) // Edit bools storing our window open/close state
+			//imgui.Checkbox("Another Window", &showAnotherWindow)
+			//	imgui
+			//imgui.SliderFloat("float", &f, 0.0, 1.0) // Edit one float using a slider from 0.0f to 1.0f
+			// TODO add example of ColorEdit3 for clearColor
+
+			//if imgui.Button("Button") { // Buttons return true when clicked (most widgets return true when edited/activated)
+			//		counter++
+			//	}
+			//	imgui.SameLine()
+			//imgui.Text(fmt.Sprintf("counter = %d", counter))
 
 			// TODO add text of FPS based on IO.Framerate()
 
