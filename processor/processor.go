@@ -93,7 +93,7 @@ type scaleTypes struct {
 	Locrian    scaleMap
 }
 
-const maxEvents = 10
+const maxEvents = 15
 const defaultBPM = 60
 const defaultTick = 250
 
@@ -115,10 +115,9 @@ type ProcInfo struct {
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
 
 	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, scaleMap{}, 0, []event{}}
-	// TODO: BUG: Need to think about how to store original index value of note into activeScale along with the string of note.
-	// Otherwise note choice will always be wrong since it uses the index along with an octave offset to generate midi note.
-	processor.initScaleTypes(F)
-	processor.activeScale = processor.scales.Phrygian
+
+	processor.initScaleTypes(B)
+	processor.activeScale = processor.scales.Ionian
 
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
@@ -128,9 +127,8 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	return &processor
 }
-func (processor *ProcInfo) setActiveScale(scale scaleTypes) {
 
-}
+/*getNotes Given a root note and an array of offsets into the chromatic scale, this function returns an array of scale notes. */
 func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string {
 	fmt.Printf("RootOffset: %d \n", rootOffset)
 	retNotes := make([]string, len(offsets))
@@ -142,6 +140,7 @@ func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string
 	return retNotes
 }
 
+/*initScaleTypes Initializes all scale types and offsets for a specific root note for later use. */
 func (processor *ProcInfo) initScaleTypes(rootNoteIndex rootNote) {
 
 	processor.scales.Chromatic.notes = make([]string, len(notes))
@@ -202,7 +201,7 @@ func (processor *ProcInfo) getMinorTriad(note rootNote) {
 
 }
 
-/* This function listens for any incoming messages and handles them accordingly */
+/*controlThread listens for any incoming messages and handles them accordingly, updating parameters etc. */
 func (processor *ProcInfo) controlThread() {
 
 	for {
@@ -212,6 +211,7 @@ func (processor *ProcInfo) controlThread() {
 	}
 }
 
+/*generationThread Handles event processing and timing of note emission acting like a sequencer for notes.*/
 func (processor *ProcInfo) generationThread() {
 
 	processor.tick = 0
@@ -239,6 +239,7 @@ func (processor *ProcInfo) generationThread() {
 	}
 }
 
+/*processMessage Handles mapping metric value into note value. Also pushes event into sequencer. */
 func (processor *ProcInfo) processMessage(value float64) {
 
 	noteVal := int(value) % len(processor.activeScale.notes)
@@ -249,27 +250,18 @@ func (processor *ProcInfo) processMessage(value float64) {
 }
 
 /*
-   handleEvents is used to trigger different kinds of events,
+   handleEvents is used to trigger different kinds of events:
+
    If an event is in state ready, then it means it's new and we need to send a NoteOn message to the midi channel.
    If an event is in state active, then we decrement the duration by 1 and Send a NoteOff message if duration == 1.(Not 0, as this makes the No of beats more readable)
    if an event is in state stop, we deallocate the event entry so it can be used again.
+
+   It needs two loops, otherwise if a previous note is the same as one being activated it might trigger a note off for the old note after the new note with the same value has been fired.
 */
 func (processor *ProcInfo) handleEvents() {
-
 	for i, e := range processor.events {
-
 		if (event{}) != e {
-
-			if e.state == ready {
-
-				fmt.Printf("Send start %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
-
-				processor.events[i].state = active
-
-				processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOn, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 80}
-
-			} else if e.state == active {
-
+			if e.state == active {
 				processor.events[i].duration--
 
 				if e.duration == 1 {
@@ -277,10 +269,21 @@ func (processor *ProcInfo) handleEvents() {
 					fmt.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
-
-					processor.output <- midioutput.MidiMessage{midioutput.Channel1, midioutput.NoteOff, processor.rootNoteOffset + processor.events[i].value, processor.events[i].octave, 50}
+					processor.output <- midioutput.MidiMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOff, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 50}
 
 				}
+			}
+		}
+	}
+	for i, e := range processor.events {
+
+		if (event{}) != e {
+			if e.state == ready {
+
+				fmt.Printf("Send start %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
+
+				processor.events[i].state = active
+				processor.output <- midioutput.MidiMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 80}
 
 			} else if e.state == stop {
 				processor.events[i] = event{}
@@ -301,7 +304,7 @@ func (processor *ProcInfo) insertEvent(eventIn event) {
 
 func (processor *ProcInfo) incrementTick() {
 
-	fmt.Printf("Tick: %f \n", processor.tick)
+	//fmt.Printf("Tick: %f \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
 	time.Sleep(processor.TickInc * time.Millisecond)

@@ -44,13 +44,13 @@ func main() {
 }
 func initializeBackend() {
 
-	prometheusControlChannel = make(chan prometheus.ControlMessage, 3)
-	prometheusOutputChannel = make(chan float64, 3)
+	prometheusControlChannel = make(chan prometheus.ControlMessage, 6)
+	prometheusOutputChannel = make(chan float64, 600)
 
-	processorControlChannel = make(chan processor.ControlMessage, 3)
-	processorOutputChannel = make(chan midioutput.MidiMessage, 3)
+	processorControlChannel = make(chan processor.ControlMessage, 6)
+	processorOutputChannel = make(chan midioutput.MidiMessage, 6)
 
-	midiControlChannel = make(chan midioutput.MidiControlMessage, 3)
+	midiControlChannel = make(chan midioutput.MidiControlMessage, 6)
 
 	prometheusScraper = prometheus.NewScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
 	metricProcessor = processor.NewProcessor(processorControlChannel, prometheusOutputChannel, processorOutputChannel)
