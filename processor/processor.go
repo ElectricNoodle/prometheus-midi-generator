@@ -29,6 +29,8 @@ const (
 var notes = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C"}
 
 var chromaticOffsets = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
+
+/* C D E F G A B C*/
 var ionianOffsets = []int{0, 2, 4, 5, 7, 9, 11, 12}
 var dorianOffsets = []int{0, 2, 3, 5, 7, 9, 10, 12}
 var phrygianOffsets = []int{0, 1, 3, 5, 7, 8, 10, 12}
@@ -76,16 +78,19 @@ type ControlMessage struct {
 	Type  MessageType
 	Value float64
 }
-
+type scaleMap struct {
+	notes   []string
+	offsets []int
+}
 type scaleTypes struct {
-	Chromatic  []string
-	Ionian     []string
-	Dorian     []string
-	Phrygian   []string
-	Lydian     []string
-	Mixolydian []string
-	Aeolian    []string
-	Locrian    []string
+	Chromatic  scaleMap
+	Ionian     scaleMap
+	Dorian     scaleMap
+	Phrygian   scaleMap
+	Lydian     scaleMap
+	Mixolydian scaleMap
+	Aeolian    scaleMap
+	Locrian    scaleMap
 }
 
 const maxEvents = 10
@@ -101,7 +106,7 @@ type ProcInfo struct {
 	TickInc        time.Duration
 	tick           float64
 	scales         scaleTypes
-	activeScale    []string
+	activeScale    scaleMap
 	rootNoteOffset int
 	events         []event
 }
@@ -109,10 +114,12 @@ type ProcInfo struct {
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
 
-	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, []string{}, 0, []event{}}
-
+	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, scaleMap{}, 0, []event{}}
+	// TODO: BUG: Need to think about how to store original index value of note into activeScale along with the string of note.
+	// Otherwise note choice will always be wrong since it uses the index along with an octave offset to generate midi note.
 	processor.initScaleTypes(F)
-	processor.activeScale = processor.scales.Ionian
+	processor.activeScale = processor.scales.Phrygian
+
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
 
@@ -121,7 +128,9 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	return &processor
 }
+func (processor *ProcInfo) setActiveScale(scale scaleTypes) {
 
+}
 func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string {
 	fmt.Printf("RootOffset: %d \n", rootOffset)
 	retNotes := make([]string, len(offsets))
@@ -135,18 +144,61 @@ func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string
 
 func (processor *ProcInfo) initScaleTypes(rootNoteIndex rootNote) {
 
-	processor.scales.Chromatic = make([]string, len(notes))
-	processor.scales.Chromatic = notes
+	processor.scales.Chromatic.notes = make([]string, len(notes))
+	processor.scales.Chromatic.notes = notes
+	processor.scales.Chromatic.offsets = chromaticOffsets
 
-	processor.scales.Ionian = processor.getNotes(rootNoteIndex, ionianOffsets)
-	processor.scales.Dorian = processor.getNotes(rootNoteIndex, dorianOffsets)
-	processor.scales.Phrygian = processor.getNotes(rootNoteIndex, phrygianOffsets)
-	processor.scales.Mixolydian = processor.getNotes(rootNoteIndex, mixolydianOffsets)
-	processor.scales.Lydian = processor.getNotes(rootNoteIndex, lydianOffsets)
-	processor.scales.Aeolian = processor.getNotes(rootNoteIndex, aeolianOffsets)
-	processor.scales.Locrian = processor.getNotes(rootNoteIndex, locrianOffsets)
+	processor.scales.Ionian.notes = processor.getNotes(rootNoteIndex, ionianOffsets)
+	processor.scales.Ionian.offsets = ionianOffsets
+
+	processor.scales.Dorian.notes = processor.getNotes(rootNoteIndex, dorianOffsets)
+	processor.scales.Dorian.offsets = dorianOffsets
+
+	processor.scales.Phrygian.notes = processor.getNotes(rootNoteIndex, phrygianOffsets)
+	processor.scales.Phrygian.offsets = phrygianOffsets
+
+	processor.scales.Mixolydian.notes = processor.getNotes(rootNoteIndex, mixolydianOffsets)
+	processor.scales.Mixolydian.offsets = mixolydianOffsets
+
+	processor.scales.Lydian.notes = processor.getNotes(rootNoteIndex, lydianOffsets)
+	processor.scales.Lydian.offsets = lydianOffsets
+
+	processor.scales.Aeolian.notes = processor.getNotes(rootNoteIndex, aeolianOffsets)
+	processor.scales.Aeolian.offsets = aeolianOffsets
+
+	processor.scales.Locrian.notes = processor.getNotes(rootNoteIndex, locrianOffsets)
+	processor.scales.Locrian.offsets = locrianOffsets
 
 	processor.rootNoteOffset = int(rootNoteIndex)
+
+}
+
+/*
+	note_index = allnotes.index(note)
+	maj_third_i = note_index + 4
+	major_third = allnotes[maj_third_i]
+	min_fifth_i = maj_third_i + 3
+	minor_fifth = allnotes[min_fifth_i]
+	majortriad = (note,major_third,minor_fifth)
+	return majortriad
+*/
+func (processor *ProcInfo) getMajorTriad(note rootNote) {
+	//index := int(note)
+	//majorThirdIndex := index + 4
+	//	minorFifthIndex := majorThirdIndex + 3
+
+}
+
+/*
+	note_index = allnotes.index(note)
+	min_third_i = note_index + 3
+	minor_third = allnotes[min_third_i]
+	maj_fifth_i = min_third_i + 4
+	major_fifth = allnotes[maj_fifth_i]
+	minortriad = (note,minor_third,major_fifth)
+	return minortriad
+*/
+func (processor *ProcInfo) getMinorTriad(note rootNote) {
 
 }
 
@@ -189,13 +241,19 @@ func (processor *ProcInfo) generationThread() {
 
 func (processor *ProcInfo) processMessage(value float64) {
 
-	noteVal := int(value) % len(processor.activeScale)
-	event := event{note, ready, 4, noteVal, 3}
+	noteVal := int(value) % len(processor.activeScale.notes)
+	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3}
 	processor.insertEvent(event)
-	fmt.Printf("Note: %s Value: %f \n", processor.activeScale[int(value)%len(processor.activeScale)], value)
+	fmt.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
 
 }
 
+/*
+   handleEvents is used to trigger different kinds of events,
+   If an event is in state ready, then it means it's new and we need to send a NoteOn message to the midi channel.
+   If an event is in state active, then we decrement the duration by 1 and Send a NoteOff message if duration == 1.(Not 0, as this makes the No of beats more readable)
+   if an event is in state stop, we deallocate the event entry so it can be used again.
+*/
 func (processor *ProcInfo) handleEvents() {
 
 	for i, e := range processor.events {
@@ -242,6 +300,7 @@ func (processor *ProcInfo) insertEvent(eventIn event) {
 }
 
 func (processor *ProcInfo) incrementTick() {
+
 	fmt.Printf("Tick: %f \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)

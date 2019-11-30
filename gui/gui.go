@@ -66,6 +66,13 @@ func Run(p Platform, r Renderer) {
 	prometheusPollRates := []int{4000, 5000, 6000, 7000, 8000}
 	prometheusPollRatesString := []string{"4000", "5000", "6000", "7000", "8000"}
 
+	var prometheusModePos int32
+	prometheusMode := "Live"
+	prometheusModes := []string{"Live", "Playback"}
+
+	prometheusStartDate := "2019-11-25 12:00"
+	prometheusEndDate := "2019-11-30 12:00"
+
 	var processorKeysPos int32
 	processorKey := "C"
 	processorKeys := []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
@@ -76,9 +83,9 @@ func Run(p Platform, r Renderer) {
 
 	var processorGenerationTypePos int32
 	processorGenerationType := "Chromatic"
-	processorGenerationTypes := []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
+	processorGenerationTypes := []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
-	fmt.Printf("Initl Config: %d %s %s %s\n", prometheusPollRate, processorKey, processorMode, processorGenerationType)
+	fmt.Printf("Initial Config: %d %s %s %s %s\n", prometheusPollRate, processorKey, processorMode, processorGenerationType, prometheusMode)
 
 	for !p.ShouldStop() {
 		p.ProcessEvents()
@@ -95,7 +102,7 @@ func Run(p Platform, r Renderer) {
 
 		{
 
-			imgui.Begin("Prometheus MIDI Generator")                                             // Create a window called "Hello, world!" and append into it.
+			imgui.Begin("Prometheus Fractal/MIDI Generator")                                     // Create a window called "Hello, world!" and append into it.
 			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.") // Display some text
 			imgui.Text("\t\t")
 			imgui.Separator()
@@ -117,6 +124,23 @@ func Run(p Platform, r Renderer) {
 			}
 
 			imgui.Text("\t")
+			if imgui.ListBoxV("\t", &prometheusModePos, prometheusModes, 2) {
+				prometheusMode = prometheusModes[prometheusModePos]
+			}
+
+			if prometheusMode == "Playback" {
+
+				imgui.Text("\t")
+				imgui.Text("Start Time: ")
+				imgui.InputText("", &prometheusStartDate)
+
+				imgui.Text("\t")
+				imgui.Text("End Time:   ")
+				imgui.InputText("", &prometheusEndDate)
+
+			}
+
+			imgui.Text("\t")
 			if imgui.Button("Start") {
 
 			}
@@ -130,7 +154,7 @@ func Run(p Platform, r Renderer) {
 			imgui.Text("\t")
 
 			imgui.Separator()
-			imgui.Text("Processor Options:")
+			imgui.Text("Processor Musical Options:")
 			imgui.Text("\t")
 
 			imgui.Text("Key:")
