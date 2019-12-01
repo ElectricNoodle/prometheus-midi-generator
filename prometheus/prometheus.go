@@ -48,8 +48,8 @@ type Scraper struct {
 
 const defaultRingSize = 10000
 
-const defaultPollRate = 4000
-const defaulttOutputRate = 4000
+const defaultPollRate = 600
+const defaulttOutputRate = 600
 
 /*MessageType The type of Control Message being sent. */
 type MessageType int
