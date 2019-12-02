@@ -158,23 +158,20 @@ func Run(p Platform, r Renderer) {
 func renderPrometheusOptions() {
 
 	imgui.Text("Prometheus Configuration:")
-
 	imgui.Text("\t")
 
 	imgui.Text("Metric:    ")
-	//imgui.SameLine()
 	imgui.InputText("", &metric)
 
 	imgui.Text("\t")
 
 	imgui.Text("Poll Rate (ms): ")
-	//	imgui.SameLine()
-	//imgui.SliderInt("", &prometheusPollRate, 1000, 10000) // Edit one float using a slider from 0.0f to 1.0f
 	if imgui.ListBoxV(" ", &prometheusPollRatePos, prometheusPollRatesString, 1) {
 		prometheusPollRate = prometheusPollRates[prometheusPollRatePos]
 	}
 
 	imgui.Text("\t")
+
 	if imgui.ListBoxV("\t", &prometheusModePos, prometheusModes, 2) {
 		prometheusMode = prometheusModes[prometheusModePos]
 	}
@@ -190,8 +187,8 @@ func renderPrometheusOptions() {
 		imgui.InputText("", &prometheusEndDate)
 
 	}
-
 	imgui.Text("\t")
+
 	if imgui.Button("Start") {
 
 	}
@@ -203,7 +200,9 @@ func renderPrometheusOptions() {
 	}
 }
 
+/*renderProcessorOptions displays all the configurable options for sound generation. */
 func renderProcessorOptions() {
+
 	imgui.Text("Processor Musical Options:")
 	imgui.Text("\t")
 
@@ -211,14 +210,12 @@ func renderProcessorOptions() {
 	if imgui.ListBoxV("  ", &processorKeysPos, processorKeys, 1) {
 		processorKey = processorKeys[processorKeysPos]
 	}
-
 	imgui.Text("\t")
 
 	imgui.Text("Mode:")
 	if imgui.ListBoxV("   ", &processorModePos, processorModes, 1) {
 		processorMode = processorModes[processorModePos]
 	}
-
 	imgui.Text("\t")
 
 	imgui.Text("Type of Generation:")

@@ -25,19 +25,75 @@ const (
 	B      rootNote = 11
 )
 
+/*Scales to add:
+2 - 1 - 3 - 1 - 1 - 3 - 1 - 2 - 1 - 2 (Long Version)
+Arabic:
+2 - 2 - 1 - 1 - 2 - 2 - 2
+Augmented:
+3 - 1 - 3 - 1 - 3 - 1
+Balinese:
+ 1 - 2 - 4 - 1 - 4
+Byzantine:
+ 1 - 3 - 1 - 2 - 1 - 3 - 1
+Chinese:
+ 4 - 2 - 1 - 4 - 1
+Dimnished:
+2 - 1 - 2 - 1 - 2 - 1 - 2 - 1
+DominantDiminished:
+1 - 2 - 1 - 2 - 1 - 2 - 1 - 2
+Egyptian:
+ 2 - 3 - 2 - 3 - 2
+Eight Tone Spanish:
+1 - 2 - 1 - 1 - 1- 2 - 2 - 2
+Geez (Ethiopian):
+2 - 1 - 2 - 2 - 1 - 2 - 2
+Hindu:
+2 - 2 - 1 - 2 - 1 - 2 - 2
+Hirajoshi:
+1 - 4 - 1 - 4 - 2
+Hungarian Gypsy:
+2 - 1 - 3 - 1 - 1 - 3 - 1
+Hungarian Major:
+3 - 1 - 2 - 1 - 2 - 1 - 2
+Japanese (in sen):
+1 - 4 - 2 - 3 - 2
+Lydian Dominant:
+2 - 2 - 2 - 1 - 2 - 1 - 2
+Neopolitan Minor:
+1 - 2 - 2 - 2 - 1 - 3 - 1
+Neopolitan Major:
+1 - 2 - 2 - 2 - 2 - 2 - 1
+Octatonic:
+1- 2 - 1 - 2 - 1 - 2 - 1 - 2
+Oriental:
+1 - 3 - 1 - 1 - 3 - 1 - 2
+Romanian Minor:
+2 - 1 - 3 - 1 - 2 - 1 - 2
+Spanish Gypsy:
+1 - 3 - 1 - 2 - 1 - 2 - 2
+Super Locrian:
+1 - 2 - 1 - 2 - 2 - 2 - 2
+*/
 /* 3 octaves of Chromatic scale which allows for generation of any scale type with any root note */
 var notes = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C"}
 
+//                    0    1     2    3     4    5    6     7    8     9    10    11   12
 var chromaticOffsets = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 
-/* C D E F G A B C*/
-var ionianOffsets = []int{0, 2, 4, 5, 7, 9, 11, 12}
+var ionianOffsets = []int{0, 2, 4, 5, 7, 9, 11, 12}  // Major
+var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12} // Minor
 var dorianOffsets = []int{0, 2, 3, 5, 7, 9, 10, 12}
 var phrygianOffsets = []int{0, 1, 3, 5, 7, 8, 10, 12}
 var lydianOffsets = []int{0, 2, 4, 6, 7, 9, 11, 12}
 var mixolydianOffsets = []int{0, 2, 4, 5, 7, 9, 10, 12}
 var aeolianOffsets = []int{0, 2, 3, 5, 7, 8, 10, 12}
-var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12}
+var japaneseYoOffsets = []int{0, 2, 5, 7, 9, 12}
+var harmonicMinorOffsets = []int{0, 2, 3, 5, 7, 8, 11, 12}
+var wholeToneOffsets = []int{0, 2, 4, 6, 8, 10, 12}
+var algerianOffsets = []int{0, 2, 3, 5, 6, 7, 8, 11, 12}
+
+//2 - 1 - 3 - 1 - 1 - 3 - 1 - 2 - 1 - 2
+var algerianLongOffsets = []int{0, 2, 3, 6, 7, 8, 11, 12, 14, 15, 17}
 
 type eventType int
 
@@ -83,14 +139,19 @@ type scaleMap struct {
 	offsets []int
 }
 type scaleTypes struct {
-	Chromatic  scaleMap
-	Ionian     scaleMap
-	Dorian     scaleMap
-	Phrygian   scaleMap
-	Lydian     scaleMap
-	Mixolydian scaleMap
-	Aeolian    scaleMap
-	Locrian    scaleMap
+	Chromatic     scaleMap
+	Ionian        scaleMap
+	Dorian        scaleMap
+	Phrygian      scaleMap
+	Lydian        scaleMap
+	Mixolydian    scaleMap
+	Aeolian       scaleMap
+	Locrian       scaleMap
+	HarmonicMinor scaleMap
+	JapaneseYo    scaleMap
+	WholeTone     scaleMap
+	Algerian      scaleMap
+	AlgerianLong  scaleMap
 }
 
 const maxEvents = 15
@@ -116,8 +177,8 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, scaleMap{}, 0, []event{}}
 
-	processor.initScaleTypes(C)
-	processor.activeScale = processor.scales.Ionian
+	processor.initScaleTypes(G)
+	processor.activeScale = processor.scales.Algerian
 
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
@@ -168,6 +229,21 @@ func (processor *ProcInfo) initScaleTypes(rootNoteIndex rootNote) {
 	processor.scales.Locrian.notes = processor.getNotes(rootNoteIndex, locrianOffsets)
 	processor.scales.Locrian.offsets = locrianOffsets
 
+	processor.scales.JapaneseYo.notes = processor.getNotes(rootNoteIndex, japaneseYoOffsets)
+	processor.scales.JapaneseYo.offsets = japaneseYoOffsets
+
+	processor.scales.HarmonicMinor.notes = processor.getNotes(rootNoteIndex, harmonicMinorOffsets)
+	processor.scales.HarmonicMinor.offsets = harmonicMinorOffsets
+
+	processor.scales.WholeTone.notes = processor.getNotes(rootNoteIndex, wholeToneOffsets)
+	processor.scales.WholeTone.offsets = wholeToneOffsets
+
+	processor.scales.Algerian.notes = processor.getNotes(rootNoteIndex, algerianOffsets)
+	processor.scales.Algerian.offsets = algerianOffsets
+
+	processor.scales.AlgerianLong.notes = processor.getNotes(rootNoteIndex, algerianLongOffsets)
+	processor.scales.AlgerianLong.offsets = algerianLongOffsets
+	/* We need to store the root note offset so we can add it to the activeScale offset on when sending a note otherwise everything would be in C. */
 	processor.rootNoteOffset = int(rootNoteIndex)
 
 }
