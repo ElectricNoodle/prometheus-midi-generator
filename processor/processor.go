@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"container/list"
 	"fmt"
 	"math"
 	"prometheus-midi-generator/midioutput"
@@ -116,6 +117,7 @@ type event struct {
 	duration  int
 	value     int
 	octave    int
+	velocity  int
 }
 
 /*MessageType Defines the different type of Control Message.*/
@@ -154,31 +156,46 @@ type scaleTypes struct {
 	AlgerianLong  scaleMap
 }
 
+type VelocityMode int
+
+const (
+	fixed              VelocityMode = 0
+	singleNoteVariance VelocityMode = 1
+)
+
+const defaultVelocity = 80
+
 const maxEvents = 15
 const defaultBPM = 120
 const defaultTick = 250
 
+const maxPreviousValues = 20
+
 /*ProcInfo Holds input/output info and generation parameters.*/
 type ProcInfo struct {
-	control        <-chan ControlMessage
-	input          <-chan float64
-	output         chan<- midioutput.MidiMessage
-	BPM            float64
-	TickInc        time.Duration
-	tick           float64
-	scales         scaleTypes
-	activeScale    scaleMap
-	rootNoteOffset int
-	events         []event
+	control             <-chan ControlMessage
+	input               <-chan float64
+	output              chan<- midioutput.MidiMessage
+	BPM                 float64
+	TickInc             time.Duration
+	tick                float64
+	scales              scaleTypes
+	activeScale         scaleMap
+	rootNoteOffset      int
+	velocitySensingMode VelocityMode
+	previousValues      *list.List
+	largestVariance     float64
+	events              []event
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
 func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
 
-	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, scaleMap{}, 0, []event{}}
+	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, scaleMap{}, 0, 0, list.New(), 0, []event{}}
 
-	processor.initScaleTypes(G)
+	processor.initScaleTypes(A)
 	processor.activeScale = processor.scales.Algerian
+	processor.velocitySensingMode = fixed
 
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
@@ -277,6 +294,58 @@ func (processor *ProcInfo) getMinorTriad(note rootNote) {
 
 }
 
+/*getVelocity implements the logic for different types of velocity sensing based on input metrics:
+  fixed					The input metrics have no effect on velocity and the default is used.
+  singleNoteVariance	The largest variance seen so far is used to calculate the current variance as
+						a percentage which is then used to control velocity.
+*/
+func (processor *ProcInfo) getVelocity(noteVal float64) int {
+	switch processor.velocitySensingMode {
+	case fixed:
+		return defaultVelocity
+	case singleNoteVariance:
+
+		if processor.largestVariance == 0 {
+			processor.largestVariance = noteVal
+			return defaultVelocity
+		}
+
+		if processor.previousValues.Front() != nil && processor.previousValues.Len() > 1 {
+
+			i := 0
+			values := make([]float64, 2)
+
+			for e := processor.previousValues.Front(); e != nil; e = e.Next() {
+				if i < 2 {
+					values[i] = e.Value.(float64)
+				} else {
+					break
+				}
+				i++
+			}
+
+			currentVariance := math.Abs(values[0] - values[1])
+
+			if currentVariance > processor.largestVariance {
+				processor.largestVariance = currentVariance
+				return 100
+			}
+
+			velocity := (defaultVelocity + int((currentVariance/processor.largestVariance)*100))
+
+			if velocity > 100 {
+				return 100
+			}
+
+			return velocity
+
+		}
+		return 20
+	default:
+		return 0
+	}
+}
+
 /*controlThread listens for any incoming messages and handles them accordingly, updating parameters etc. */
 func (processor *ProcInfo) controlThread() {
 
@@ -315,14 +384,24 @@ func (processor *ProcInfo) generationThread() {
 	}
 }
 
+func (processor *ProcInfo) addToPreviousValues(value float64) {
+
+	if processor.previousValues.Len() >= maxPreviousValues {
+		processor.previousValues.Remove(processor.previousValues.Back())
+	}
+	processor.previousValues.PushFront(value)
+}
+
 /*processMessage Handles mapping metric value into note value. Also pushes event into sequencer. */
 func (processor *ProcInfo) processMessage(value float64) {
 
 	noteVal := int(value) % len(processor.activeScale.notes)
-	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3}
+	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
+
 	processor.insertEvent(event)
 	fmt.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
 
+	processor.addToPreviousValues(value)
 }
 
 /*

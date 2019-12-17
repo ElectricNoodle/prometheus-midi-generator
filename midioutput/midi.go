@@ -1,8 +1,6 @@
 package midioutput
 
 import (
-	"log"
-
 	"github.com/rakyll/portmidi"
 )
 
@@ -78,13 +76,13 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 
 	midiProcessor := MidiInfo{controlChannel, inputChannel, 2, nil}
 	portmidi.Initialize()
-	out, err := portmidi.NewOutputStream(2, 1024, 0)
+	//out, err := portmidi.NewOutputStream(2, 1024, 0)
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 
-	midiProcessor.midiOutputStream = out
+	//midiProcessor.midiOutputStream = out
 	go midiProcessor.midiEmitThread()
 	return &midiProcessor
 }
