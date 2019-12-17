@@ -305,11 +305,6 @@ func (processor *ProcInfo) getVelocity(noteVal float64) int {
 		return defaultVelocity
 	case singleNoteVariance:
 
-		if processor.largestVariance == 0 {
-			processor.largestVariance = noteVal
-			return defaultVelocity
-		}
-
 		if processor.previousValues.Front() != nil && processor.previousValues.Len() > 1 {
 
 			i := 0
@@ -340,7 +335,7 @@ func (processor *ProcInfo) getVelocity(noteVal float64) int {
 			return velocity
 
 		}
-		return 20
+		return defaultVelocity
 	default:
 		return 0
 	}
