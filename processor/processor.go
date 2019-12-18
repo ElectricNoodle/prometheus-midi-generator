@@ -184,7 +184,7 @@ type ProcInfo struct {
 	rootNoteOffset      int
 	velocitySensingMode VelocityMode
 	previousValues      *list.List
-	largestVariance     float64
+	maxVariance         float64
 	events              []event
 }
 
@@ -321,12 +321,12 @@ func (processor *ProcInfo) getVelocity(noteVal float64) int {
 
 			currentVariance := math.Abs(values[0] - values[1])
 
-			if currentVariance > processor.largestVariance {
-				processor.largestVariance = currentVariance
+			if currentVariance > processor.maxVariance {
+				processor.maxVariance = currentVariance
 				return 100
 			}
 
-			velocity := (defaultVelocity + int((currentVariance/processor.largestVariance)*100))
+			velocity := (defaultVelocity + int((currentVariance/processor.maxVariance)*100))
 
 			if velocity > 100 {
 				return 100
