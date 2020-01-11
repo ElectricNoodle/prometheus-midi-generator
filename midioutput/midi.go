@@ -75,7 +75,7 @@ type MidiInfo struct {
 func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *MidiInfo {
 
 	midiProcessor := MidiInfo{controlChannel, inputChannel, 2, nil}
-	portmidi.Initialize()
+	//portmidi.Initialize()
 	//out, err := portmidi.NewOutputStream(2, 1024, 0)
 
 	//if err != nil {
@@ -89,8 +89,8 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 
 func (midiEmitter *MidiInfo) midiEmitThread() {
 	for {
-		message := <-midiEmitter.input
+		//	message := <-midiEmitter.input
 		//fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
-		midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
+		//	midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 	}
 }

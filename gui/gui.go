@@ -3,6 +3,7 @@ package gui
 import (
 	"time"
 
+	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/inkyblackness/imgui-go"
 )
 
@@ -146,6 +147,7 @@ func Run(p Platform, r Renderer) {
 		r.PreRender(clearColor)
 		// A this point, the application could perform its own rendering...
 		// app.RenderScene()
+		//renderFractal(p.DisplaySize(), p.FramebufferSize())
 
 		r.Render(p.DisplaySize(), p.FramebufferSize(), imgui.RenderedDrawData())
 		p.PostRender()
@@ -153,6 +155,114 @@ func Run(p Platform, r Renderer) {
 		// sleep to avoid 100% CPU usage for this demo
 		<-time.After(time.Millisecond * 25)
 	}
+}
+
+func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
+
+	//displayWidth, displayHeight := displaySize[0], displaySize[1]
+	fbWidth, fbHeight := framebufferSize[0], framebufferSize[1]
+	if (fbWidth <= 0) || (fbHeight <= 0) {
+		return
+	}
+
+	// Backup GL state
+	var lastActiveTexture int32
+	gl.GetIntegerv(gl.ACTIVE_TEXTURE, &lastActiveTexture)
+	gl.ActiveTexture(gl.TEXTURE0)
+	var lastProgram int32
+	gl.GetIntegerv(gl.CURRENT_PROGRAM, &lastProgram)
+	var lastTexture int32
+	gl.GetIntegerv(gl.TEXTURE_BINDING_2D, &lastTexture)
+	var lastSampler int32
+	gl.GetIntegerv(gl.SAMPLER_BINDING, &lastSampler)
+	var lastArrayBuffer int32
+	gl.GetIntegerv(gl.ARRAY_BUFFER_BINDING, &lastArrayBuffer)
+	var lastElementArrayBuffer int32
+	gl.GetIntegerv(gl.ELEMENT_ARRAY_BUFFER_BINDING, &lastElementArrayBuffer)
+	var lastVertexArray int32
+	gl.GetIntegerv(gl.VERTEX_ARRAY_BINDING, &lastVertexArray)
+	var lastPolygonMode [2]int32
+	gl.GetIntegerv(gl.POLYGON_MODE, &lastPolygonMode[0])
+	var lastViewport [4]int32
+	gl.GetIntegerv(gl.VIEWPORT, &lastViewport[0])
+	var lastScissorBox [4]int32
+	gl.GetIntegerv(gl.SCISSOR_BOX, &lastScissorBox[0])
+	var lastBlendSrcRgb int32
+	gl.GetIntegerv(gl.BLEND_SRC_RGB, &lastBlendSrcRgb)
+	var lastBlendDstRgb int32
+	gl.GetIntegerv(gl.BLEND_DST_RGB, &lastBlendDstRgb)
+	var lastBlendSrcAlpha int32
+	gl.GetIntegerv(gl.BLEND_SRC_ALPHA, &lastBlendSrcAlpha)
+	var lastBlendDstAlpha int32
+	gl.GetIntegerv(gl.BLEND_DST_ALPHA, &lastBlendDstAlpha)
+	var lastBlendEquationRgb int32
+	gl.GetIntegerv(gl.BLEND_EQUATION_RGB, &lastBlendEquationRgb)
+	var lastBlendEquationAlpha int32
+	gl.GetIntegerv(gl.BLEND_EQUATION_ALPHA, &lastBlendEquationAlpha)
+	lastEnableBlend := gl.IsEnabled(gl.BLEND)
+	lastEnableCullFace := gl.IsEnabled(gl.CULL_FACE)
+	lastEnableDepthTest := gl.IsEnabled(gl.DEPTH_TEST)
+	lastEnableScissorTest := gl.IsEnabled(gl.SCISSOR_TEST)
+
+	var vertices = []float64{
+		0.0, 0.5, 0.0,
+		0.5, -0.5, 0.0,
+		-0.5, -0.5, 0.0,
+	}
+
+	var VBO uint32
+	var VAO uint32
+
+	//var test [20]int
+	gl.GenVertexArrays(1, &VAO)
+	gl.BindVertexArray(VAO)
+
+	gl.Viewport(0, 0, int32(fbWidth), int32(fbHeight))
+
+	gl.GenBuffers(1, &VBO)
+	gl.BindBuffer(gl.ARRAY_BUFFER, VBO)
+	gl.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.Ptr(vertices), gl.STATIC_DRAW)
+
+	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	gl.EnableVertexAttribArray(0)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
+	gl.DrawArrays(gl.TRIANGLES, 0, 3)
+	gl.DisableVertexAttribArray(0)
+
+	// Restore modified GL state
+	gl.UseProgram(uint32(lastProgram))
+	gl.BindTexture(gl.TEXTURE_2D, uint32(lastTexture))
+	gl.BindSampler(0, uint32(lastSampler))
+	gl.ActiveTexture(uint32(lastActiveTexture))
+	gl.BindVertexArray(uint32(lastVertexArray))
+	gl.BindBuffer(gl.ARRAY_BUFFER, uint32(lastArrayBuffer))
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, uint32(lastElementArrayBuffer))
+	gl.BlendEquationSeparate(uint32(lastBlendEquationRgb), uint32(lastBlendEquationAlpha))
+	gl.BlendFuncSeparate(uint32(lastBlendSrcRgb), uint32(lastBlendDstRgb), uint32(lastBlendSrcAlpha), uint32(lastBlendDstAlpha))
+	if lastEnableBlend {
+		gl.Enable(gl.BLEND)
+	} else {
+		gl.Disable(gl.BLEND)
+	}
+	if lastEnableCullFace {
+		gl.Enable(gl.CULL_FACE)
+	} else {
+		gl.Disable(gl.CULL_FACE)
+	}
+	if lastEnableDepthTest {
+		gl.Enable(gl.DEPTH_TEST)
+	} else {
+		gl.Disable(gl.DEPTH_TEST)
+	}
+	if lastEnableScissorTest {
+		gl.Enable(gl.SCISSOR_TEST)
+	} else {
+		gl.Disable(gl.SCISSOR_TEST)
+	}
+	gl.PolygonMode(gl.FRONT_AND_BACK, uint32(lastPolygonMode[0]))
+	gl.Viewport(lastViewport[0], lastViewport[1], lastViewport[2], lastViewport[3])
+	gl.Scissor(lastScissorBox[0], lastScissorBox[1], lastScissorBox[2], lastScissorBox[3])
+
 }
 
 func renderPrometheusOptions() {

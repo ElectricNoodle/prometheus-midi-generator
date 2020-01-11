@@ -117,7 +117,7 @@ type event struct {
 	duration  int
 	value     int
 	octave    int
-	velocity  int
+	velocity  int64
 }
 
 /*MessageType Defines the different type of Control Message.*/
@@ -136,10 +136,12 @@ type ControlMessage struct {
 	Type  MessageType
 	Value float64
 }
+
 type scaleMap struct {
 	notes   []string
 	offsets []int
 }
+
 type scaleTypes struct {
 	Chromatic     scaleMap
 	Ionian        scaleMap
@@ -163,7 +165,7 @@ const (
 	singleNoteVariance VelocityMode = 1
 )
 
-const defaultVelocity = 80
+const defaultVelocity = 0
 
 const maxEvents = 15
 const defaultBPM = 120
@@ -195,7 +197,7 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 
 	processor.initScaleTypes(A)
 	processor.activeScale = processor.scales.Algerian
-	processor.velocitySensingMode = fixed
+	processor.velocitySensingMode = singleNoteVariance
 
 	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
@@ -299,7 +301,7 @@ func (processor *ProcInfo) getMinorTriad(note rootNote) {
   singleNoteVariance	The largest variance seen so far is used to calculate the current variance as
 						a percentage which is then used to control velocity.
 */
-func (processor *ProcInfo) getVelocity(noteVal float64) int {
+func (processor *ProcInfo) getVelocity(noteVal float64) int64 {
 	switch processor.velocitySensingMode {
 	case fixed:
 		return defaultVelocity
@@ -323,13 +325,13 @@ func (processor *ProcInfo) getVelocity(noteVal float64) int {
 
 			if currentVariance > processor.maxVariance {
 				processor.maxVariance = currentVariance
-				return 100
+				return 127
 			}
 
-			velocity := (defaultVelocity + int((currentVariance/processor.maxVariance)*100))
+			velocity := (defaultVelocity + int64((currentVariance/processor.maxVariance)*100))
 
-			if velocity > 100 {
-				return 100
+			if velocity > 127 {
+				return 127
 			}
 
 			return velocity
@@ -430,10 +432,10 @@ func (processor *ProcInfo) handleEvents() {
 		if (event{}) != e {
 			if e.state == ready {
 
-				fmt.Printf("Send start %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
+				fmt.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 80}
+				processor.output <- midioutput.MidiMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
 
 			} else if e.state == stop {
 				processor.events[i] = event{}

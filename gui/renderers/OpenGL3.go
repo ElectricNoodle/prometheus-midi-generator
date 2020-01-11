@@ -15,6 +15,7 @@ type OpenGL3 struct {
 	glslVersion            string
 	fontTexture            uint32
 	shaderHandle           uint32
+	FractalShader          uint32
 	vertHandle             uint32
 	fragHandle             uint32
 	attribLocationTex      int32
