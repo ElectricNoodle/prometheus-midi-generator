@@ -4,7 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"math"
-	"prometheus-midi-generator/midioutput"
+	"midioutput"
 	"time"
 )
 

@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
-	"prometheus-midi-generator/gui"
-	"prometheus-midi-generator/gui/platforms"
-	"prometheus-midi-generator/gui/renderers"
-	"prometheus-midi-generator/midioutput"
-	"prometheus-midi-generator/processor"
-	"prometheus-midi-generator/prometheus"
+	"gui"
+	"gui/platforms"
+	"gui/renderers"
+	"midioutput"
+	"processor"
+	"prometheus"
 
 	"github.com/inkyblackness/imgui-go"
 )
