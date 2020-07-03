@@ -76,6 +76,7 @@ processor_config:
     - name: "Super Locrian"
       intervals: [1,2,1,2,2,2,2]
     
+
 # Scales to add:
 # https://en.wikipedia.org/wiki/List_of_musical_scales_and_modes
 # https://andrulianblog.wordpress.com/2014/04/14/a-list-of-unusual-scales/
