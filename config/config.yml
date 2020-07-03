@@ -29,58 +29,53 @@ processor_config:
       intervals: [2,1,2,1,1,1,3,1]
     - name: "Algerian Long"
       intervals: [2,1,3,1,1,3,1,2,1,2]
-
+    - name: "Arabic"
+      intervals: [2,2,1,1,2,2,2]
+    - name: "Augmented"
+      intervals: [3,1,3,1,3,1]
+    - name: "Balinese"
+      intervals: [1,2,4,1,4]
+    - name: "Byzantine"
+      intervals: [1,3,1,2,1,3,1] 
+    - name: "Chinese"
+      intervals: [4,2,1,4,1]
+    - name: "Diminished"
+      intervals: [2,1,2,1,2,1,2,1]
+    - name: "Dominant Diminished"
+      intervals: [1,2,1,2,1,2,1,2]
+    - name: "Egyptian"
+      intervals: [2,3,2,3,2]
+    - name: "Eight Tone Spanish"
+      intervals: [1,2,1,1,1,2,2,2]
+    - name: "Geez (Ethiopian)"
+      intervals: [2,1,2,2,1,2,2]
+    - name: "Hindu"
+      intervals: [2,2,1,2,1,2,2]
+    - name: "Hirajoshi"
+      intervals: [1,4,1,4,2]
+    - name: "Hungarian Gypsy"
+      intervals: [2,1,3,1,1,3,1]
+    - name: "Hungarian Major"
+      intervals: [3,1,2,1,2,1,2]
+    - name: "Japanese (in sen)"
+      intervals: [1,4,2,3,2]
+    - name: "Lydian Dominant"
+      intervals: [2,2,2,1,2,1,2]
+    - name: "Neopolitan Minor"
+      intervals: [1,2,2,2,1,3,1]
+    - name: "Neopolitan Major"
+      intervals: [1,2,2,2,2,2,1]
+    - name: "Octatonic"
+      intervals: [1,2,1,2,1,2,1,2]
+    - name: "Oriental"
+      intervals: [1,3,1,1,3,1,2]
+    - name: "Romanian Minor"
+      intervals: [2,1,3,1,2,1,2]
+    - name: "Spanish Gypsy"
+      intervals: [1,3,1,2,1,2,2]
+    - name: "Super Locrian"
+      intervals: [1,2,1,2,2,2,2]
+    
 # Scales to add:
-
 # https://en.wikipedia.org/wiki/List_of_musical_scales_and_modes
 # https://andrulianblog.wordpress.com/2014/04/14/a-list-of-unusual-scales/
-
-
-# 2 - 1 - 3 - 1 - 1 - 3 - 1 - 2 - 1 - 2 (Long Version)
-# Arabic:
-# 2 - 2 - 1 - 1 - 2 - 2 - 2
-# Augmented:
-# 3 - 1 - 3 - 1 - 3 - 1
-# Balinese:
-#  1 - 2 - 4 - 1 - 4
-# Byzantine:
-#  1 - 3 - 1 - 2 - 1 - 3 - 1
-# Chinese:
-#  4 - 2 - 1 - 4 - 1
-# Dimnished:
-# 2 - 1 - 2 - 1 - 2 - 1 - 2 - 1
-# DominantDiminished:
-# 1 - 2 - 1 - 2 - 1 - 2 - 1 - 2
-# Egyptian:
-#  2 - 3 - 2 - 3 - 2
-# Eight Tone Spanish:
-# 1 - 2 - 1 - 1 - 1- 2 - 2 - 2
-# Geez (Ethiopian):
-# 2 - 1 - 2 - 2 - 1 - 2 - 2
-# Hindu:
-# 2 - 2 - 1 - 2 - 1 - 2 - 2
-# Hirajoshi:
-# 1 - 4 - 1 - 4 - 2
-# Hungarian Gypsy:
-# 2 - 1 - 3 - 1 - 1 - 3 - 1
-# Hungarian Major:
-# 3 - 1 - 2 - 1 - 2 - 1 - 2
-# Japanese (in sen):
-# 1 - 4 - 2 - 3 - 2
-# Lydian Dominant:
-# 2 - 2 - 2 - 1 - 2 - 1 - 2
-# Neopolitan Minor:
-# 1 - 2 - 2 - 2 - 1 - 3 - 1
-# Neopolitan Major:
-# 1 - 2 - 2 - 2 - 2 - 2 - 1
-# Octatonic:
-# 1- 2 - 1 - 2 - 1 - 2 - 1 - 2
-# Oriental:
-# 1 - 3 - 1 - 1 - 3 - 1 - 2
-# Romanian Minor:
-# 2 - 1 - 3 - 1 - 2 - 1 - 2
-# Spanish Gypsy:
-# 1 - 3 - 1 - 2 - 1 - 2 - 2
-# Super Locrian:
-# 1 - 2 - 1 - 2 - 2 - 2 - 2
-
