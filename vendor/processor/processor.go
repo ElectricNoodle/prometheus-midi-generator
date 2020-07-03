@@ -49,6 +49,7 @@ const (
 	parameter eventType = 1
 )
 
+/*eventState Defines all of the states a sequencer event can be in */
 type eventState int
 
 const (
@@ -57,6 +58,7 @@ const (
 	stop   eventState = 2
 )
 
+/*event Stores information needed to send different types of MIDI Message. */
 type event struct {
 	eventType eventType
 	state     eventState
@@ -69,7 +71,6 @@ type event struct {
 /*MessageType Defines the different types of Control Message.*/
 type MessageType int
 
-/* Values for MessageType */
 const (
 	StartOutput      MessageType = 0
 	StopOutput       MessageType = 1
@@ -83,6 +84,7 @@ type ControlMessage struct {
 	Value float64
 }
 
+/*scaleMap Used for storing all useful information of a scale. */
 type scaleMap struct {
 	name      string
 	notes     []string
