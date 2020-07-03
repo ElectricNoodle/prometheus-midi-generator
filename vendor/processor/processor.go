@@ -8,23 +8,21 @@ import (
 	"time"
 )
 
-type rootNote int
-
-/* Const indexes for note values at positions so code is more readable. NOTE: Removed CLow/CHigh concept, nnot sure if it's needed here. */
-const (
-	C      rootNote = 0
-	CSharp rootNote = 1
-	D      rootNote = 2
-	DSharp rootNote = 3
-	E      rootNote = 4
-	F      rootNote = 5
-	FSharp rootNote = 6
-	G      rootNote = 7
-	GSharp rootNote = 8
-	A      rootNote = 9
-	ASharp rootNote = 10
-	B      rootNote = 11
-)
+/*noteIndexes Fixed values used to transpose scales into different keys */
+var noteIndexes = map[string]int{
+	"C":  0,
+	"C#": 1,
+	"D":  2,
+	"D#": 3,
+	"E":  4,
+	"F":  5,
+	"F#": 6,
+	"G":  7,
+	"G#": 8,
+	"A":  9,
+	"A#": 10,
+	"B":  11,
+}
 
 /* 3 octaves of Chromatic scale which allows for generation of any scale type with any root note */
 var notes = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C"}
@@ -132,7 +130,7 @@ func NewProcessor(processorConfig Config, controlChannel <-chan ControlMessage, 
 	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, make(map[string]scaleMap), scaleMap{}, 0, 0, list.New(), 0, []event{}}
 
 	processor.parseScales(processorConfig.Scales)
-	processor.generateNotesOfScale(A)
+	processor.generateNotesOfScale(noteIndexes[processorConfig.DefaultKey])
 
 	processor.activeScale = processor.scales[processorConfig.DefaultScale]
 	processor.velocitySensingMode = singleNoteVariance //fixed
@@ -176,7 +174,7 @@ func (processor *ProcInfo) getNoteOffsets(intervals []int) []int {
 }
 
 /*getNotes Given a root note and an array of offsets into the chromatic scale, this function returns an array of scale notes. */
-func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string {
+func (processor *ProcInfo) getNotes(rootOffset int, offsets []int) []string {
 
 	retNotes := make([]string, len(offsets))
 
@@ -188,7 +186,7 @@ func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string
 }
 
 /*initScaleTypes Initializes all scale types and offsets for a specific root note for later use. */
-func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex rootNote) {
+func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex int) {
 
 	for key, scale := range processor.scales {
 
@@ -212,7 +210,7 @@ func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex rootNote) {
 	majortriad = (note,major_third,minor_fifth)
 	return majortriad
 */
-func (processor *ProcInfo) getMajorTriad(note rootNote) {
+func (processor *ProcInfo) getMajorTriad(note int) {
 	//index := int(note)
 	//majorThirdIndex := index + 4
 	//	minorFifthIndex := majorThirdIndex + 3
@@ -228,7 +226,7 @@ func (processor *ProcInfo) getMajorTriad(note rootNote) {
 	minortriad = (note,minor_third,major_fifth)
 	return minortriad
 */
-func (processor *ProcInfo) getMinorTriad(note rootNote) {
+func (processor *ProcInfo) getMinorTriad(note int) {
 
 }
 
