@@ -29,10 +29,17 @@ const (
 /* 3 octaves of Chromatic scale which allows for generation of any scale type with any root note */
 var notes = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C"}
 
-/*Scale Defines the YAML configuration format */
+/*Scale Defines the format of a scale config */
 type Scale struct {
 	Name      string `yaml:"name"`
 	Intervals []int  `yaml:"intervals,flow"`
+}
+
+/*Config Defines the format of the process */
+type Config struct {
+	DefaultKey   string  `yaml:"default_key"`
+	DefaultScale string  `yaml:"default_scale"`
+	Scales       []Scale `yaml:"scales"`
 }
 
 type eventType int
@@ -89,6 +96,7 @@ const (
 	fixed              velocityMode = 0
 	singleNoteVariance velocityMode = 1
 )
+
 const maxVelocity = 127
 const defaultVelocity = 0
 
@@ -116,14 +124,14 @@ type ProcInfo struct {
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(scaleList []Scale, controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
+func NewProcessor(processorConfig Config, controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
 
 	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, make(map[string]scaleMap), scaleMap{}, 0, 0, list.New(), 0, []event{}}
 
-	processor.parseScales(scaleList)
+	processor.parseScales(processorConfig.Scales)
 	processor.generateNotesOfScale(A)
 
-	processor.activeScale = processor.scales["Algerian"]
+	processor.activeScale = processor.scales[processorConfig.DefaultScale]
 	processor.velocitySensingMode = singleNoteVariance //fixed
 
 	fmt.Printf("Active Scale: %v+\n", processor.activeScale)
@@ -133,6 +141,7 @@ func NewProcessor(scaleList []Scale, controlChannel <-chan ControlMessage, input
 	go processor.generationThread()
 
 	return &processor
+
 }
 
 /*parseScales Processes and stores the scales from the configuration file and generates note offset values for them. */

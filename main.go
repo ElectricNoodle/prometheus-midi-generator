@@ -17,8 +17,8 @@ import (
 )
 
 type config struct {
-	PrometheusServer string            `yaml:"prometheus_server"`
-	Scalelist        []processor.Scale `yaml:"scales"`
+	PrometheusServer string           `yaml:"prometheus_server"`
+	ProcessorConfig  processor.Config `yaml:"processor_config"`
 }
 
 var configuration *config
@@ -37,7 +37,7 @@ var midiControlChannel chan midioutput.MidiControlMessage
 
 func main() {
 
-	configuration = loadConfig("config.yml")
+	configuration = loadConfig("config/config.yml")
 
 	initializeBackend()
 
@@ -61,21 +61,29 @@ func loadConfig(path string) *config {
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
-
+	//fmt.Printf("%v\n", yamlFile)
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
 
 	if c.PrometheusServer == "" {
-		log.Fatal("Configuration file invalid: No Prometheus server is defined. \n")
+		log.Fatal("Configuration file invalid: No Prometheus server is defined.\n")
 	}
 
-	if c.Scalelist == nil {
-		log.Fatal("Configuration file doesn't contain any scales\n")
+	if c.ProcessorConfig.DefaultKey == "" {
+		log.Fatal("Processor configuration doesn't contain a valid default key.\n")
 	}
 
-	for _, scale := range c.Scalelist {
+	if c.ProcessorConfig.DefaultScale == "" {
+		log.Fatal("Processor configuration doesn't contain a valid default scale.\n")
+	}
+
+	if len(c.ProcessorConfig.Scales) < 1 {
+		log.Fatal("Processor configuration doesn't contain any scale definitions.\n")
+	}
+
+	for _, scale := range c.ProcessorConfig.Scales {
 		if scale.Name == "" {
 			log.Fatal("Configuration file invalid: Scale defined without name.\n")
 		}
@@ -98,7 +106,7 @@ func initializeBackend() {
 	midiControlChannel = make(chan midioutput.MidiControlMessage, 6)
 
 	prometheusScraper = prometheus.NewScraper(configuration.PrometheusServer, prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
-	metricProcessor = processor.NewProcessor(configuration.Scalelist, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
+	metricProcessor = processor.NewProcessor(configuration.ProcessorConfig, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
 	midiOutput = midioutput.NewMidi(midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)
