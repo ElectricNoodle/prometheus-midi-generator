@@ -71,6 +71,7 @@ type event struct {
 /*MessageType Defines the different types of Control Message.*/
 type MessageType int
 
+/* Used to nicely assign values to message types */
 const (
 	StartOutput      MessageType = 0
 	StopOutput       MessageType = 1
