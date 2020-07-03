@@ -2,16 +2,26 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"gui"
 	"gui/platforms"
 	"gui/renderers"
+	"io/ioutil"
+	"log"
 	"midioutput"
+	"os"
 	"processor"
 	"prometheus"
 
 	"github.com/inkyblackness/imgui-go"
+	"gopkg.in/yaml.v2"
 )
+
+type config struct {
+	PrometheusServer string            `yaml:"prometheus_server"`
+	Scalelist        []processor.Scale `yaml:"scales"`
+}
+
+var configuration *config
 
 var prometheusScraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
@@ -27,15 +37,12 @@ var midiControlChannel chan midioutput.MidiControlMessage
 
 func main() {
 
+	configuration = loadConfig("config.yml")
+
 	initializeBackend()
 
 	/* Test messages to set Query Info and Start playback. */
-	//queryInfo := prometheus.QueryInfo{"stddev_over_time(pf_current_entries_total{instance=~\"sovapn1:9116\"}[12h])", 1573075902, 1573075902, 600}
-	//rate(node_network_transmit_bytes_total{instance=~\"nos-analytics:9100\",device=\"ens18\"}[10m])
-	//pf_current_entries_total{instance=~\"sovapn1:9116\"}
-	//max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})
-	queryInfo := prometheus.QueryInfo{Query: "max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})", Start: 1576281600, End: 1576886400, Step: 600}
-
+	queryInfo := prometheus.QueryInfo{Query: "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})", Start: 1590969600, End: 1593475200, Step: 600}
 	messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
 	//messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
 
@@ -45,6 +52,41 @@ func main() {
 	initializeGUI()
 
 }
+
+func loadConfig(path string) *config {
+
+	var c *config
+
+	yamlFile, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Printf("yamlFile.Get err   #%v ", err)
+	}
+
+	err = yaml.Unmarshal(yamlFile, &c)
+	if err != nil {
+		log.Fatalf("Unmarshal: %v", err)
+	}
+
+	if c.PrometheusServer == "" {
+		log.Fatal("Configuration file invalid: No Prometheus server is defined. \n")
+	}
+
+	if c.Scalelist == nil {
+		log.Fatal("Configuration file doesn't contain any scales\n")
+	}
+
+	for _, scale := range c.Scalelist {
+		if scale.Name == "" {
+			log.Fatal("Configuration file invalid: Scale defined without name.\n")
+		}
+		if scale.Intervals == nil || len(scale.Intervals) < 1 {
+			log.Fatalf("Configuration file invalid: %s scale defined without any intervals.\n", scale.Name)
+		}
+	}
+
+	return c
+}
+
 func initializeBackend() {
 
 	prometheusControlChannel = make(chan prometheus.ControlMessage, 6)
@@ -55,8 +97,8 @@ func initializeBackend() {
 
 	midiControlChannel = make(chan midioutput.MidiControlMessage, 6)
 
-	prometheusScraper = prometheus.NewScraper("http://192.168.150.187:9090/api/v1/query_range", prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
-	metricProcessor = processor.NewProcessor(processorControlChannel, prometheusOutputChannel, processorOutputChannel)
+	prometheusScraper = prometheus.NewScraper(configuration.PrometheusServer, prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
+	metricProcessor = processor.NewProcessor(configuration.Scalelist, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
 	midiOutput = midioutput.NewMidi(midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)

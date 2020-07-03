@@ -26,75 +26,14 @@ const (
 	B      rootNote = 11
 )
 
-/*Scales to add:
-2 - 1 - 3 - 1 - 1 - 3 - 1 - 2 - 1 - 2 (Long Version)
-Arabic:
-2 - 2 - 1 - 1 - 2 - 2 - 2
-Augmented:
-3 - 1 - 3 - 1 - 3 - 1
-Balinese:
- 1 - 2 - 4 - 1 - 4
-Byzantine:
- 1 - 3 - 1 - 2 - 1 - 3 - 1
-Chinese:
- 4 - 2 - 1 - 4 - 1
-Dimnished:
-2 - 1 - 2 - 1 - 2 - 1 - 2 - 1
-DominantDiminished:
-1 - 2 - 1 - 2 - 1 - 2 - 1 - 2
-Egyptian:
- 2 - 3 - 2 - 3 - 2
-Eight Tone Spanish:
-1 - 2 - 1 - 1 - 1- 2 - 2 - 2
-Geez (Ethiopian):
-2 - 1 - 2 - 2 - 1 - 2 - 2
-Hindu:
-2 - 2 - 1 - 2 - 1 - 2 - 2
-Hirajoshi:
-1 - 4 - 1 - 4 - 2
-Hungarian Gypsy:
-2 - 1 - 3 - 1 - 1 - 3 - 1
-Hungarian Major:
-3 - 1 - 2 - 1 - 2 - 1 - 2
-Japanese (in sen):
-1 - 4 - 2 - 3 - 2
-Lydian Dominant:
-2 - 2 - 2 - 1 - 2 - 1 - 2
-Neopolitan Minor:
-1 - 2 - 2 - 2 - 1 - 3 - 1
-Neopolitan Major:
-1 - 2 - 2 - 2 - 2 - 2 - 1
-Octatonic:
-1- 2 - 1 - 2 - 1 - 2 - 1 - 2
-Oriental:
-1 - 3 - 1 - 1 - 3 - 1 - 2
-Romanian Minor:
-2 - 1 - 3 - 1 - 2 - 1 - 2
-Spanish Gypsy:
-1 - 3 - 1 - 2 - 1 - 2 - 2
-Super Locrian:
-1 - 2 - 1 - 2 - 2 - 2 - 2
-*/
 /* 3 octaves of Chromatic scale which allows for generation of any scale type with any root note */
 var notes = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "C"}
 
-//                    0    1     2    3     4    5    6     7    8     9    10    11   12
-var chromaticOffsets = []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
-
-var ionianOffsets = []int{0, 2, 4, 5, 7, 9, 11, 12}  // Major
-var locrianOffsets = []int{0, 1, 3, 5, 6, 8, 10, 12} // Minor
-var dorianOffsets = []int{0, 2, 3, 5, 7, 9, 10, 12}
-var phrygianOffsets = []int{0, 1, 3, 5, 7, 8, 10, 12}
-var lydianOffsets = []int{0, 2, 4, 6, 7, 9, 11, 12}
-var mixolydianOffsets = []int{0, 2, 4, 5, 7, 9, 10, 12}
-var aeolianOffsets = []int{0, 2, 3, 5, 7, 8, 10, 12}
-var japaneseYoOffsets = []int{0, 2, 5, 7, 9, 12}
-var harmonicMinorOffsets = []int{0, 2, 3, 5, 7, 8, 11, 12}
-var wholeToneOffsets = []int{0, 2, 4, 6, 8, 10, 12}
-var algerianOffsets = []int{0, 2, 3, 5, 6, 7, 8, 11, 12}
-
-//2 - 1 - 3 - 1 - 1 - 3 - 1 - 2 - 1 - 2
-var algerianLongOffsets = []int{0, 2, 3, 6, 7, 8, 11, 12, 14, 15, 17}
+/*Scale Defines the YAML configuration format */
+type Scale struct {
+	Name      string `yaml:"name"`
+	Intervals []int  `yaml:"intervals,flow"`
+}
 
 type eventType int
 
@@ -120,7 +59,7 @@ type event struct {
 	velocity  int64
 }
 
-/*MessageType Defines the different type of Control Message.*/
+/*MessageType Defines the different types of Control Message.*/
 type MessageType int
 
 /* Values for MessageType */
@@ -138,33 +77,19 @@ type ControlMessage struct {
 }
 
 type scaleMap struct {
-	notes   []string
-	offsets []int
+	name      string
+	notes     []string
+	offsets   []int
+	intervals []int
 }
 
-type scaleTypes struct {
-	Chromatic     scaleMap
-	Ionian        scaleMap
-	Dorian        scaleMap
-	Phrygian      scaleMap
-	Lydian        scaleMap
-	Mixolydian    scaleMap
-	Aeolian       scaleMap
-	Locrian       scaleMap
-	HarmonicMinor scaleMap
-	JapaneseYo    scaleMap
-	WholeTone     scaleMap
-	Algerian      scaleMap
-	AlgerianLong  scaleMap
-}
-
-type VelocityMode int
+type velocityMode int
 
 const (
-	fixed              VelocityMode = 0
-	singleNoteVariance VelocityMode = 1
+	fixed              velocityMode = 0
+	singleNoteVariance velocityMode = 1
 )
-
+const maxVelocity = 127
 const defaultVelocity = 0
 
 const maxEvents = 15
@@ -181,25 +106,27 @@ type ProcInfo struct {
 	BPM                 float64
 	TickInc             time.Duration
 	tick                float64
-	scales              scaleTypes
+	scales              map[string]scaleMap
 	activeScale         scaleMap
 	rootNoteOffset      int
-	velocitySensingMode VelocityMode
+	velocitySensingMode velocityMode
 	previousValues      *list.List
 	maxVariance         float64
 	events              []event
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
+func NewProcessor(scaleList []Scale, controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
 
-	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, scaleTypes{}, scaleMap{}, 0, 0, list.New(), 0, []event{}}
+	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, make(map[string]scaleMap), scaleMap{}, 0, 0, list.New(), 0, []event{}}
 
-	processor.initScaleTypes(A)
-	processor.activeScale = processor.scales.Algerian
-	processor.velocitySensingMode = singleNoteVariance
+	processor.parseScales(scaleList)
+	processor.generateNotesOfScale(A)
 
-	fmt.Printf("ActiveScale: %v+\n", processor.activeScale)
+	processor.activeScale = processor.scales["Algerian"]
+	processor.velocitySensingMode = singleNoteVariance //fixed
+
+	fmt.Printf("Active Scale: %v+\n", processor.activeScale)
 	processor.events = make([]event, maxEvents)
 
 	go processor.controlThread()
@@ -208,9 +135,37 @@ func NewProcessor(controlChannel <-chan ControlMessage, inputChannel <-chan floa
 	return &processor
 }
 
+/*parseScales Processes and stores the scales from the configuration file and generates note offset values for them. */
+func (processor *ProcInfo) parseScales(scaleList []Scale) {
+
+	for _, scale := range scaleList {
+
+		var scaleMapping scaleMap
+
+		scaleMapping.name = scale.Name
+		scaleMapping.intervals = scale.Intervals
+		scaleMapping.offsets = processor.getNoteOffsets(scaleMapping.intervals)
+
+		processor.scales[scale.Name] = scaleMapping
+	}
+}
+
+/*getNoteOffsets Generates the note offset values for the specified array of intervals */
+func (processor *ProcInfo) getNoteOffsets(intervals []int) []int {
+
+	offsets := make([]int, len(intervals)+1)
+	offsets[0] = 0
+
+	for i, interval := range intervals {
+		offsets[i+1] = offsets[i] + interval
+	}
+
+	return offsets
+}
+
 /*getNotes Given a root note and an array of offsets into the chromatic scale, this function returns an array of scale notes. */
 func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string {
-	fmt.Printf("RootOffset: %d \n", rootOffset)
+
 	retNotes := make([]string, len(offsets))
 
 	for i, offset := range offsets {
@@ -221,47 +176,16 @@ func (processor *ProcInfo) getNotes(rootOffset rootNote, offsets []int) []string
 }
 
 /*initScaleTypes Initializes all scale types and offsets for a specific root note for later use. */
-func (processor *ProcInfo) initScaleTypes(rootNoteIndex rootNote) {
+func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex rootNote) {
 
-	processor.scales.Chromatic.notes = make([]string, len(notes))
-	processor.scales.Chromatic.notes = notes
-	processor.scales.Chromatic.offsets = chromaticOffsets
+	for key, scale := range processor.scales {
 
-	processor.scales.Ionian.notes = processor.getNotes(rootNoteIndex, ionianOffsets)
-	processor.scales.Ionian.offsets = ionianOffsets
+		scale.notes = processor.getNotes(rootNoteIndex, scale.offsets)
+		processor.scales[key] = scale
 
-	processor.scales.Dorian.notes = processor.getNotes(rootNoteIndex, dorianOffsets)
-	processor.scales.Dorian.offsets = dorianOffsets
+		fmt.Printf("Scale Name: %s\n Intervals:\t %v\n Offsets:\t %v\n Notes:\t\t %v \n", scale.name, scale.intervals, scale.offsets, scale.notes)
+	}
 
-	processor.scales.Phrygian.notes = processor.getNotes(rootNoteIndex, phrygianOffsets)
-	processor.scales.Phrygian.offsets = phrygianOffsets
-
-	processor.scales.Mixolydian.notes = processor.getNotes(rootNoteIndex, mixolydianOffsets)
-	processor.scales.Mixolydian.offsets = mixolydianOffsets
-
-	processor.scales.Lydian.notes = processor.getNotes(rootNoteIndex, lydianOffsets)
-	processor.scales.Lydian.offsets = lydianOffsets
-
-	processor.scales.Aeolian.notes = processor.getNotes(rootNoteIndex, aeolianOffsets)
-	processor.scales.Aeolian.offsets = aeolianOffsets
-
-	processor.scales.Locrian.notes = processor.getNotes(rootNoteIndex, locrianOffsets)
-	processor.scales.Locrian.offsets = locrianOffsets
-
-	processor.scales.JapaneseYo.notes = processor.getNotes(rootNoteIndex, japaneseYoOffsets)
-	processor.scales.JapaneseYo.offsets = japaneseYoOffsets
-
-	processor.scales.HarmonicMinor.notes = processor.getNotes(rootNoteIndex, harmonicMinorOffsets)
-	processor.scales.HarmonicMinor.offsets = harmonicMinorOffsets
-
-	processor.scales.WholeTone.notes = processor.getNotes(rootNoteIndex, wholeToneOffsets)
-	processor.scales.WholeTone.offsets = wholeToneOffsets
-
-	processor.scales.Algerian.notes = processor.getNotes(rootNoteIndex, algerianOffsets)
-	processor.scales.Algerian.offsets = algerianOffsets
-
-	processor.scales.AlgerianLong.notes = processor.getNotes(rootNoteIndex, algerianLongOffsets)
-	processor.scales.AlgerianLong.offsets = algerianLongOffsets
 	/* We need to store the root note offset so we can add it to the activeScale offset on when sending a note otherwise everything would be in C. */
 	processor.rootNoteOffset = int(rootNoteIndex)
 
@@ -298,10 +222,13 @@ func (processor *ProcInfo) getMinorTriad(note rootNote) {
 
 /*getVelocity implements the logic for different types of velocity sensing based on input metrics:
   fixed					The input metrics have no effect on velocity and the default is used.
-  singleNoteVariance	The largest variance seen so far is used to calculate the current variance as
-						a percentage which is then used to control velocity.
+  singleNoteVariance	The max variance between the current value and the last is tracked over time
+						and used to calculate what percentage the most recent variance is of that.
+						This is then added to the defaultVelocity.
+						NOTE: Should maybe try changing it so it calcs that as a percentage of change
+						of the total velocity range to see how it sounds.
 */
-func (processor *ProcInfo) getVelocity(noteVal float64) int64 {
+func (processor *ProcInfo) getVelocity(value float64) int64 {
 	switch processor.velocitySensingMode {
 	case fixed:
 		return defaultVelocity
@@ -325,13 +252,13 @@ func (processor *ProcInfo) getVelocity(noteVal float64) int64 {
 
 			if currentVariance > processor.maxVariance {
 				processor.maxVariance = currentVariance
-				return 127
+				return maxVelocity
 			}
 
 			velocity := (defaultVelocity + int64((currentVariance/processor.maxVariance)*100))
 
-			if velocity > 127 {
-				return 127
+			if velocity > maxVelocity {
+				return maxVelocity
 			}
 
 			return velocity
@@ -348,7 +275,7 @@ func (processor *ProcInfo) controlThread() {
 
 	for {
 		message := <-processor.control
-		fmt.Printf("TEST %f\n", message.Value)
+		fmt.Printf("Received Message: %v\n", message.Value)
 
 	}
 }
@@ -381,6 +308,7 @@ func (processor *ProcInfo) generationThread() {
 	}
 }
 
+/*addToPreviousValues  */
 func (processor *ProcInfo) addToPreviousValues(value float64) {
 
 	if processor.previousValues.Len() >= maxPreviousValues {

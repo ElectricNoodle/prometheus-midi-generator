@@ -1,6 +1,9 @@
 package midioutput
 
 import (
+	"fmt"
+	"log"
+
 	"github.com/rakyll/portmidi"
 )
 
@@ -75,22 +78,25 @@ type MidiInfo struct {
 func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *MidiInfo {
 
 	midiProcessor := MidiInfo{controlChannel, inputChannel, 2, nil}
-	//portmidi.Initialize()
-	//out, err := portmidi.NewOutputStream(2, 1024, 0)
+	portmidi.Initialize()
+	count := portmidi.CountDevices()
+	fmt.Printf("Count: %d\n", count)
+	out, err := portmidi.NewOutputStream(2, 1024, 0)
 
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	if err != nil {
+		log.Fatal(err)
 
-	//midiProcessor.midiOutputStream = out
+	}
+
+	midiProcessor.midiOutputStream = out
 	go midiProcessor.midiEmitThread()
 	return &midiProcessor
 }
 
 func (midiEmitter *MidiInfo) midiEmitThread() {
 	for {
-		//	message := <-midiEmitter.input
-		//fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
-		//	midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
+		message := <-midiEmitter.input
+		fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+		midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 	}
 }

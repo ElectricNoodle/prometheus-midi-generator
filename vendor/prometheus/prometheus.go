@@ -104,9 +104,11 @@ func (tp *Point) UnmarshalJSON(data []byte) error {
 }
 
 /*NewScraper Initializes a new instance of the scraper struct and starts the control thread. */
-func NewScraper(queryEndpoint string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *Scraper {
+func NewScraper(server string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *Scraper {
 
+	queryEndpoint := "http://" + server + "/api/v1/query_range"
 	scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate}
+
 	go scraper.prometheusControlThread()
 
 	return &scraper
@@ -203,6 +205,7 @@ func (collector *Scraper) populateRingBuffer(data []Point) {
    NOTE: Doesn't handle more than one set of time series (Result[0]), Will expand to handle it later.
 */
 func (collector *Scraper) getTimeSeriesData(query string, start float64, end float64, step int) []Point {
+
 	request, err := http.NewRequest("GET", collector.Target, nil)
 
 	if err != nil {
