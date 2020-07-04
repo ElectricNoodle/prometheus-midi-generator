@@ -286,7 +286,6 @@ func (processor *ProcInfo) controlThread() {
 	for {
 		message := <-processor.control
 		fmt.Printf("Received Message: %v\n", message.Value)
-
 	}
 }
 
@@ -296,23 +295,14 @@ func (processor *ProcInfo) generationThread() {
 	processor.tick = 0
 
 	for {
-
 		select {
-
 		case message := <-processor.input:
-
 			processor.processMessage(message)
-
 		default:
-
 			if processor.tick == 0 {
-
 				processor.handleEvents()
-
 			}
-
 			processor.incrementTick()
-
 		}
 
 	}
@@ -352,6 +342,7 @@ func (processor *ProcInfo) handleEvents() {
 	for i, e := range processor.events {
 		if (event{}) != e {
 			if e.state == active {
+
 				processor.events[i].duration--
 
 				if e.duration == 1 {

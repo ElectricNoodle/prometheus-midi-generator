@@ -15,24 +15,24 @@ type metric struct {
 	Job      string
 }
 
-type Point struct {
+type point struct {
 	Timestamp int64
 	Value     float64
 }
 
-type TimeSeries struct {
+type timeSeries struct {
 	m      metric
-	Values []Point `json:"values"`
+	Values []point `json:"values"`
 }
 
-type PrometheusData struct {
+type prometheusData struct {
 	ResultType string       `json:"type"`
-	Result     []TimeSeries `json:"result"`
+	Result     []timeSeries `json:"result"`
 }
 
-type APIResponse struct {
+type apiResponse struct {
 	Status string         `json:"status"`
-	Data   PrometheusData `json:"data"`
+	Data   prometheusData `json:"data"`
 }
 
 /*Scraper Holds all relevant variables for scraping Promthetheus.*/
@@ -54,7 +54,7 @@ const defaulttOutputRate = 600
 /*MessageType The type of Control Message being sent. */
 type MessageType int
 
-/* Message Types for Control Messages1 */
+/* Message Types for Control Messages */
 const (
 	StartOutput      MessageType = 0
 	StopOutput       MessageType = 1
@@ -88,7 +88,8 @@ type ControlMessage struct {
 	Value      int
 }
 
-func (tp *Point) UnmarshalJSON(data []byte) error {
+/*UnmarshalJSON Parses timestamp/value from byte array */
+func (tp *point) UnmarshalJSON(data []byte) error {
 
 	var v []interface{}
 
@@ -194,7 +195,7 @@ func (collector *Scraper) queryThread(query string, step int) {
 	}
 }
 
-func (collector *Scraper) populateRingBuffer(data []Point) {
+func (collector *Scraper) populateRingBuffer(data []point) {
 	for _, point := range data {
 		//fmt.Printf("PromValue: %f\n", point.Value)
 		collector.data.Put(point.Value)
@@ -204,13 +205,13 @@ func (collector *Scraper) populateRingBuffer(data []Point) {
 /* Returns an array of points which represent the timeseries data for the specified query.
    NOTE: Doesn't handle more than one set of time series (Result[0]), Will expand to handle it later.
 */
-func (collector *Scraper) getTimeSeriesData(query string, start float64, end float64, step int) []Point {
+func (collector *Scraper) getTimeSeriesData(query string, start float64, end float64, step int) []point {
 
 	request, err := http.NewRequest("GET", collector.Target, nil)
 
 	if err != nil {
 		fmt.Printf("%s\n", err)
-		return []Point{}
+		return []point{}
 	}
 
 	q := request.URL.Query()
@@ -230,18 +231,18 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 
 	if err != nil {
 		fmt.Printf("Error1: %s\n", err)
-		return []Point{}
+		return []point{}
 	}
 
 	defer result.Body.Close()
 
-	var apiResponse APIResponse
+	var apiResponse apiResponse
 
 	e := json.NewDecoder(result.Body).Decode(&apiResponse)
 
 	if e != nil {
 		fmt.Printf("Error2: %s\n", e)
-		return []Point{}
+		return []point{}
 	}
 	/* Need to check that return value is valid before returning. */
 	return apiResponse.Data.Result[0].Values
