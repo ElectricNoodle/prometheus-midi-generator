@@ -1,6 +1,9 @@
 package gui
 
 import (
+	"midioutput"
+	"processor"
+	"prometheus"
 	"time"
 
 	"github.com/go-gl/gl/v2.1/gl"
@@ -74,9 +77,8 @@ var processorGenerationTypePos int32
 var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
-// Run implements the main program loop of the demo. It returns when the platform signals to stop.
-// This demo application shows some basic features of ImGui, as well as exposing the standard demo window.
-func Run(p Platform, r Renderer) {
+/*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
+func Run(p Platform, r Renderer, prometheusScraper *prometheus.Scraper, processor *processor.ProcInfo, midiOutput *midioutput.MidiInfo) {
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
 	showDemoWindow := false
@@ -101,6 +103,11 @@ func Run(p Platform, r Renderer) {
 		{
 			imgui.Begin("Prometheus Fractal/MIDI Generator")                                     // Create a window called "Hello, world!" and append into it.
 			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.") // Display some text
+
+			imgui.Text("\t\t")
+			imgui.Separator()
+
+			renderMIDIOptions()
 
 			imgui.Text("\t\t")
 			imgui.Separator()
@@ -265,6 +272,12 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 
 }
 
+func renderMIDIOptions() {
+	imgui.Text("MIDI Configuration:")
+	imgui.Text("\t")
+
+}
+
 func renderPrometheusOptions() {
 
 	imgui.Text("Prometheus Configuration:")
@@ -297,14 +310,17 @@ func renderPrometheusOptions() {
 		imgui.InputText("", &prometheusEndDate)
 
 	}
+
 	imgui.Text("\t")
 
 	if imgui.Button("Start") {
 
 	}
+
 	imgui.SameLine()
 	imgui.Text(" ")
 	imgui.SameLine()
+
 	if imgui.Button("Stop") {
 
 	}

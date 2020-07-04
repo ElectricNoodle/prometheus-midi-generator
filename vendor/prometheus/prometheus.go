@@ -35,6 +35,10 @@ type apiResponse struct {
 	Data   prometheusData `json:"data"`
 }
 
+var httpClient = &http.Client{
+	Timeout: time.Second * 3,
+}
+
 /*Scraper Holds all relevant variables for scraping Promthetheus.*/
 type Scraper struct {
 	Target     string
@@ -152,10 +156,11 @@ func (collector *Scraper) prometheusControlThread() {
 func (collector *Scraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
 
 	data := collector.getTimeSeriesData(query, start, end, step)
+
 	collector.populateRingBuffer(data)
 
 	if mode == Live {
-		fmt.Println("In live mode")
+		fmt.Println("Running in live mode")
 		go collector.queryThread(query, step)
 	}
 
@@ -185,7 +190,6 @@ func (collector *Scraper) queryThread(query string, step int) {
 	for {
 
 		now := float64(time.Now().Unix())
-		//	fmt.Printf("Polling for data..\n")
 
 		data := collector.getTimeSeriesData(query, now, now, step)
 		collector.populateRingBuffer(data)
@@ -223,14 +227,10 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 
 	request.URL.RawQuery = q.Encode()
 
-	//fmt.Printf("URL      %+v\n", request.URL)
-	//fmt.Printf("RawQuery %+v\n", request.URL.RawQuery)
-	//fmt.Printf("Query    %+v\n", request.URL.Query())
-
-	result, err := http.DefaultClient.Do(request)
+	result, err := httpClient.Do(request)
 
 	if err != nil {
-		fmt.Printf("Error1: %s\n", err)
+		fmt.Printf("Error: %s\n", err)
 		return []point{}
 	}
 
@@ -241,7 +241,7 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 	e := json.NewDecoder(result.Body).Decode(&apiResponse)
 
 	if e != nil {
-		fmt.Printf("Error2: %s\n", e)
+		fmt.Printf("Error: %s\n", e)
 		return []point{}
 	}
 	/* Need to check that return value is valid before returning. */

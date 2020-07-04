@@ -138,5 +138,5 @@ func initializeGUI() {
 
 	defer renderer.Dispose()
 
-	gui.Run(platform, renderer)
+	gui.Run(platform, renderer, prometheusScraper, metricProcessor, midiOutput)
 }
