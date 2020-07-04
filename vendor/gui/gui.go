@@ -50,6 +50,8 @@ type Renderer interface {
 	Render(displaySize [2]float32, framebufferSize [2]float32, drawData imgui.DrawData)
 }
 
+var midiDevicesPos int32
+
 var prometheusPollRatePos int32
 var prometheusPollRate = 4000
 
@@ -78,7 +80,7 @@ var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, prometheusScraper *prometheus.Scraper, processor *processor.ProcInfo, midiOutput *midioutput.MidiInfo) {
+func Run(p Platform, r Renderer, prometheusScraper *prometheus.Scraper, processor *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
 	showDemoWindow := false
@@ -107,7 +109,7 @@ func Run(p Platform, r Renderer, prometheusScraper *prometheus.Scraper, processo
 			imgui.Text("\t\t")
 			imgui.Separator()
 
-			renderMIDIOptions()
+			renderMIDIOptions(midiEmitter)
 
 			imgui.Text("\t\t")
 			imgui.Separator()
@@ -272,10 +274,14 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 
 }
 
-func renderMIDIOptions() {
+func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
 	imgui.Text("MIDI Configuration:")
 	imgui.Text("\t")
-
+	imgui.Text("Devices: ")
+	if imgui.ListBoxV("", &midiDevicesPos, midiEmitter.GetDeviceNames(), 2) {
+		//prometheusPollRate = prometheusPollRates[prometheusPollRatePos]
+	}
+	imgui.Text("\t")
 }
 
 func renderPrometheusOptions() {

@@ -52,8 +52,8 @@ const (
 	//ControlChange MessageType = 2
 )
 
-/*MidiMessage Hold all of the information required to build a MIDI message, recieved from processor.go*/
-type MidiMessage struct {
+/*MIDIMessage Hold all of the information required to build a MIDI message, recieved from processor.go*/
+type MIDIMessage struct {
 	Channel  MessageType
 	Type     MessageType
 	Note     int
@@ -61,25 +61,29 @@ type MidiMessage struct {
 	Velocity int64
 }
 
-/*MidiControlMessage Used to store information on control messages recieved. */
-type MidiControlMessage struct {
+/*MIDIControlMessage Used to store information on control messages recieved. */
+type MIDIControlMessage struct {
 	Value int
 }
 
-/*MIDIInfo Holds relevant info needed to recieve input/emit midi messages. */
-type MIDIInfo struct {
-	control          <-chan MidiControlMessage
-	input            <-chan MidiMessage
-	port             int
-	midiOutputStream *portmidi.Stream
+/*MIDIEmitter Holds relevant info needed to recieve input/emit midi messages. */
+type MIDIEmitter struct {
+	control        <-chan MIDIControlMessage
+	input          <-chan MIDIMessage
+	DeviceInfo     []*portmidi.DeviceInfo
+	configuredPort int
+	deviceCount    int
+	midiOutput     *portmidi.Stream
 }
 
+var maxDevices = 10
+
 /*NewMidi Returns a new instance of midi struct, and inits midi connection. */
-func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiMessage) *MIDIInfo {
+func NewMidi(controlChannel <-chan MIDIControlMessage, inputChannel <-chan MIDIMessage) *MIDIEmitter {
 
-	midiProcessor := MIDIInfo{controlChannel, inputChannel, 2, nil}
+	midiEmitter := MIDIEmitter{controlChannel, inputChannel, []*portmidi.DeviceInfo{}, 0, 0, nil}
 
-	midiProcessor.initMIDI()
+	midiEmitter.initMIDI()
 
 	portmidi.Initialize()
 	count := portmidi.CountDevices()
@@ -94,24 +98,57 @@ func NewMidi(controlChannel <-chan MidiControlMessage, inputChannel <-chan MidiM
 
 	}
 
-	midiProcessor.midiOutputStream = out
-	go midiProcessor.midiEmitThread()
-	return &midiProcessor
+	midiEmitter.midiOutput = out
+
+	go midiEmitter.midiEmitThread()
+	return &midiEmitter
 }
 
-func (midiEmitter *MIDIInfo) initMIDI() {
+/*initMIDI Initializes the portmidi library and stores device info. */
+func (midiEmitter *MIDIEmitter) initMIDI() {
 
 	err := portmidi.Initialize()
 
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	for i := 0; i < portmidi.CountDevices(); i++ {
+
+		device := portmidi.Info(portmidi.DeviceID(i))
+
+		if device.IsOutputAvailable == true && device.IsOpened == false {
+
+			midiEmitter.DeviceInfo = append(midiEmitter.DeviceInfo, device)
+			midiEmitter.deviceCount++
+		}
+	}
+
+	if midiEmitter.deviceCount < 1 {
+		log.Println("Error no MIDI devices available")
+	}
 }
 
-func (midiEmitter *MIDIInfo) midiEmitThread() {
+/*GetDeviceNames returns an array of midi device names. */
+func (midiEmitter *MIDIEmitter) GetDeviceNames() []string {
+
+	names := make([]string, midiEmitter.deviceCount)
+
+	if midiEmitter.deviceCount < 1 {
+		return []string{"No devices found."}
+	}
+
+	for i := 0; i < midiEmitter.deviceCount; i++ {
+		names[i] = midiEmitter.DeviceInfo[i].Name
+	}
+
+	return names
+}
+
+func (midiEmitter *MIDIEmitter) midiEmitThread() {
 	for {
 		message := <-midiEmitter.input
 		fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
-		midiEmitter.midiOutputStream.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
+		midiEmitter.midiOutput.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 	}
 }

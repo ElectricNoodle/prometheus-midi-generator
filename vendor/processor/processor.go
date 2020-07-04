@@ -111,7 +111,7 @@ const maxPreviousValues = 20
 type ProcInfo struct {
 	control             <-chan ControlMessage
 	input               <-chan float64
-	output              chan<- midioutput.MidiMessage
+	output              chan<- midioutput.MIDIMessage
 	BPM                 float64
 	TickInc             time.Duration
 	tick                float64
@@ -125,18 +125,18 @@ type ProcInfo struct {
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(processorConfig Config, controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MidiMessage) *ProcInfo {
+func NewProcessor(processorConfig Config, controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MIDIMessage) *ProcInfo {
 
-	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM, defaultTick, 0, make(map[string]scaleMap), scaleMap{}, 0, 0, list.New(), 0, []event{}}
+	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM,
+		defaultTick, 0, make(map[string]scaleMap), scaleMap{},
+		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
 
 	processor.parseScales(processorConfig.Scales)
 	processor.generateNotesOfScale(noteIndexes[processorConfig.DefaultKey])
 
 	processor.activeScale = processor.scales[processorConfig.DefaultScale]
-	processor.velocitySensingMode = singleNoteVariance //fixed
 
 	fmt.Printf("Active Scale: %v+\n", processor.activeScale)
-	processor.events = make([]event, maxEvents)
 
 	go processor.controlThread()
 	go processor.generationThread()
@@ -319,7 +319,7 @@ func (processor *ProcInfo) addToPreviousValues(value float64) {
 
 /*processMessage Handles mapping metric value into note value. Also pushes event into sequencer. */
 func (processor *ProcInfo) processMessage(value float64) {
-
+	/*  */
 	noteVal := int(value) % len(processor.activeScale.notes)
 	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
 
@@ -350,7 +350,7 @@ func (processor *ProcInfo) handleEvents() {
 					fmt.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
-					processor.output <- midioutput.MidiMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOff, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 50}
+					processor.output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOff, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 50}
 
 				}
 			}
@@ -364,7 +364,7 @@ func (processor *ProcInfo) handleEvents() {
 				fmt.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MidiMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
+				processor.output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
 
 			} else if e.state == stop {
 				processor.events[i] = event{}

@@ -25,15 +25,15 @@ var configuration *config
 
 var prometheusScraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
-var midiOutput *midioutput.MidiInfo
+var midiEmitter *midioutput.MIDIEmitter
 
 var prometheusControlChannel chan prometheus.ControlMessage
 var prometheusOutputChannel chan float64
 
 var processorControlChannel chan processor.ControlMessage
-var processorOutputChannel chan midioutput.MidiMessage
+var processorOutputChannel chan midioutput.MIDIMessage
 
-var midiControlChannel chan midioutput.MidiControlMessage
+var midiControlChannel chan midioutput.MIDIControlMessage
 
 func main() {
 
@@ -101,17 +101,17 @@ func initializeBackend() {
 	prometheusOutputChannel = make(chan float64, 600)
 
 	processorControlChannel = make(chan processor.ControlMessage, 6)
-	processorOutputChannel = make(chan midioutput.MidiMessage, 6)
+	processorOutputChannel = make(chan midioutput.MIDIMessage, 6)
 
-	midiControlChannel = make(chan midioutput.MidiControlMessage, 6)
+	midiControlChannel = make(chan midioutput.MIDIControlMessage, 6)
 
 	prometheusScraper = prometheus.NewScraper(configuration.PrometheusServer, prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
 	metricProcessor = processor.NewProcessor(configuration.ProcessorConfig, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
-	midiOutput = midioutput.NewMidi(midiControlChannel, processorOutputChannel)
+	midiEmitter = midioutput.NewMidi(midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)
 	fmt.Printf("%f\n", metricProcessor.BPM)
-	fmt.Printf("%v+\n", midiOutput)
+	fmt.Printf("%v+\n", midiEmitter)
 
 }
 
@@ -138,5 +138,5 @@ func initializeGUI() {
 
 	defer renderer.Dispose()
 
-	gui.Run(platform, renderer, prometheusScraper, metricProcessor, midiOutput)
+	gui.Run(platform, renderer, prometheusScraper, metricProcessor, midiEmitter)
 }
