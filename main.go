@@ -42,11 +42,11 @@ func main() {
 	initializeBackend()
 
 	/* Test messages to set Query Info and Start playback. */
-	queryInfo := prometheus.QueryInfo{Query: "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})", Start: 1590969600, End: 1593475200, Step: 600}
-	messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
+	//queryInfo := prometheus.QueryInfo{Query: "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})", Start: 1590969600, End: 1593475200, Step: 600}
+	//messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
 	//messageStop := prometheus.ControlMessage{prometheus.StopOutput, 0, prometheus.QueryInfo{}, 0}
 
-	prometheusControlChannel <- messageStart
+	//prometheusControlChannel <- messageStart
 	//prometheusControlChannel <- messageStop
 
 	initializeGUI()

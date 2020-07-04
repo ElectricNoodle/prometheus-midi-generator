@@ -275,13 +275,19 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 }
 
 func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
+
 	imgui.Text("MIDI Configuration:")
 	imgui.Text("\t")
-	imgui.Text("Devices: ")
+	imgui.Text("Select Device: ")
+
 	if imgui.ListBoxV("", &midiDevicesPos, midiEmitter.GetDeviceNames(), 2) {
-		//prometheusPollRate = prometheusPollRates[prometheusPollRatePos]
+
+		midiEmitter.Control <- midioutput.MIDIControlMessage{Type: midioutput.SetDevice, Value: int(midiDevicesPos)}
+
 	}
+
 	imgui.Text("\t")
+
 }
 
 func renderPrometheusOptions() {
