@@ -43,11 +43,12 @@ var httpClient = &http.Client{
 type Scraper struct {
 	Target     string
 	output     chan<- float64
-	control    <-chan ControlMessage
+	Control    chan ControlMessage
 	mode       OutputType
 	data       *queue.RingBuffer
 	pollRate   int
 	outputRate int
+	isActive   bool
 }
 
 const defaultRingSize = 10000
@@ -109,10 +110,10 @@ func (tp *point) UnmarshalJSON(data []byte) error {
 }
 
 /*NewScraper Initializes a new instance of the scraper struct and starts the control thread. */
-func NewScraper(server string, mode OutputType, controlChannel <-chan ControlMessage, outputChannel chan<- float64) *Scraper {
+func NewScraper(server string, mode OutputType, controlChannel chan ControlMessage, outputChannel chan<- float64) *Scraper {
 
 	queryEndpoint := "http://" + server + "/api/v1/query_range"
-	scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate}
+	scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate, true}
 
 	go scraper.prometheusControlThread()
 
@@ -123,7 +124,7 @@ func NewScraper(server string, mode OutputType, controlChannel <-chan ControlMes
 func (collector *Scraper) prometheusControlThread() {
 	for {
 
-		message := <-collector.control
+		message := <-collector.Control
 
 		switch message.Type {
 
@@ -132,6 +133,7 @@ func (collector *Scraper) prometheusControlThread() {
 			fmt.Printf("Starting output thread.. Playback Type: %d\n", message.OutputType)
 			fmt.Printf("Query: %s Start: %f Stop: %f Step: %d \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
 
+			collector.isActive = true
 			collector.queryPrometheus(message.OutputType, message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
 
 		case ChangePollRate:
@@ -146,6 +148,8 @@ func (collector *Scraper) prometheusControlThread() {
 
 		case StopOutput:
 			fmt.Printf("Stopping output thread..\n")
+			collector.isActive = false
+
 		default:
 			fmt.Printf("Unknown MessageType: (%d \n", message.Type)
 		}
@@ -172,30 +176,35 @@ func (collector *Scraper) queryPrometheus(mode OutputType, query string, start f
 /* Gets the next item from the RingBuffer and emits it on the output channel. Then sleeps for a configurable duration. */
 func (collector *Scraper) outputThread() {
 	for {
+		if collector.isActive {
+			item, err := collector.data.Get()
 
-		item, err := collector.data.Get()
+			if err != nil {
+				fmt.Printf("Error: %s", err)
+			}
 
-		if err != nil {
-			fmt.Printf("Error: %s", err)
+			collector.output <- item.(float64)
+			time.Sleep(time.Duration(collector.outputRate) * time.Millisecond)
+
+		} else {
+			return
 		}
-
-		collector.output <- item.(float64)
-
-		time.Sleep(time.Duration(collector.outputRate) * time.Millisecond)
 	}
 }
 
 /* Queries for latest TimeSeries data, and sleeps for configurable duration. */
 func (collector *Scraper) queryThread(query string, step int) {
 	for {
+		if collector.isActive {
+			now := float64(time.Now().Unix())
 
-		now := float64(time.Now().Unix())
+			data := collector.getTimeSeriesData(query, now, now, step)
+			collector.populateRingBuffer(data)
 
-		data := collector.getTimeSeriesData(query, now, now, step)
-		collector.populateRingBuffer(data)
-
-		time.Sleep(time.Duration(collector.pollRate) * time.Millisecond)
-
+			time.Sleep(time.Duration(collector.pollRate) * time.Millisecond)
+		} else {
+			return
+		}
 	}
 }
 

@@ -80,7 +80,7 @@ var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, prometheusScraper *prometheus.Scraper, processor *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
+func Run(p Platform, r Renderer, scraper *prometheus.Scraper, processor *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
 	showDemoWindow := false
@@ -114,7 +114,7 @@ func Run(p Platform, r Renderer, prometheusScraper *prometheus.Scraper, processo
 			imgui.Text("\t\t")
 			imgui.Separator()
 
-			renderPrometheusOptions()
+			renderPrometheusOptions(scraper)
 
 			imgui.Text("\t")
 			imgui.Separator()
@@ -290,7 +290,7 @@ func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
 
 }
 
-func renderPrometheusOptions() {
+func renderPrometheusOptions(scraper *prometheus.Scraper) {
 
 	imgui.Text("Prometheus Configuration:")
 	imgui.Text("\t")
@@ -326,7 +326,9 @@ func renderPrometheusOptions() {
 	imgui.Text("\t")
 
 	if imgui.Button("Start") {
-
+		queryInfo := prometheus.QueryInfo{Query: "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})", Start: 1590969600, End: 1593475200, Step: 600}
+		messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
+		scraper.Control <- messageStart
 	}
 
 	imgui.SameLine()
@@ -334,6 +336,9 @@ func renderPrometheusOptions() {
 	imgui.SameLine()
 
 	if imgui.Button("Stop") {
+
+		messageStop := prometheus.ControlMessage{Type: prometheus.StopOutput, OutputType: prometheus.Playback, QueryInfo: prometheus.QueryInfo{}, Value: 0}
+		scraper.Control <- messageStop
 
 	}
 }

@@ -1,7 +1,6 @@
 package midioutput
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/rakyll/portmidi"
@@ -124,7 +123,10 @@ func (midiEmitter *MIDIEmitter) initMIDI() {
 
 	if midiEmitter.deviceCount < 1 {
 		log.Println("Error no MIDI devices available")
+		return
 	}
+
+	midiEmitter.setDevice(0)
 }
 
 /*GetDeviceNames returns an array of midi device names. */
@@ -191,7 +193,11 @@ func (midiEmitter *MIDIEmitter) setDevice(id int) {
 func (midiEmitter *MIDIEmitter) emitThread() {
 	for {
 		message := <-midiEmitter.input
-		fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
-		midiEmitter.midiOutput.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
+		//fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+		if midiEmitter.midiOutput != nil {
+			midiEmitter.midiOutput.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
+		} else {
+			log.Println("No MIDI Device configured.")
+		}
 	}
 }
