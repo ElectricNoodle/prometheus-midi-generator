@@ -154,7 +154,6 @@ func (midiEmitter *MIDIEmitter) controlThread() {
 
 		case SetDevice:
 			midiEmitter.setDevice(message.Value)
-			break
 
 		}
 	}

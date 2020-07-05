@@ -139,13 +139,13 @@ func (collector *Scraper) prometheusControlThread() {
 
 		case ChangePollRate:
 
-			fmt.Printf("Changing PollRate by (%d) \n", message.Value)
-			collector.pollRate += message.Value
+			fmt.Printf("Changing PollRate to (%d) \n", message.Value)
+			collector.pollRate = message.Value
 
 		case ChangeOutputRate:
 
-			fmt.Printf("Changing OutputRate by (%d) \n", message.Value)
-			collector.outputRate += message.Value
+			fmt.Printf("Changing OutputRate to (%d) \n", message.Value)
+			collector.outputRate = message.Value
 
 		case StopOutput:
 			fmt.Printf("Stopping polling/output of new data.\n")
@@ -161,9 +161,8 @@ func (collector *Scraper) prometheusControlThread() {
 func (collector *Scraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) {
 
 	data := collector.getTimeSeriesData(query, start, end, step)
-
 	collector.populateRingBuffer(data)
-	log.Println("After popRingbuf call.")
+
 	if mode == Live {
 		fmt.Println("Running in live mode")
 		go collector.queryThread(query, step)

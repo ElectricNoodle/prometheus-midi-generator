@@ -67,8 +67,6 @@ var prometheusStartDate = "2020-06-01 00:00"
 var prometheusEndDate = "2020-06-30 23:59"
 
 var processorKeysPos int32
-var processorKey = "C"
-var processorKeys = []string{"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
 
 var processorModePos int32
 var processorMode = "Chromatic"
@@ -79,7 +77,7 @@ var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, scraper *prometheus.Scraper, processor *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
+func Run(p Platform, r Renderer, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
 	showDemoWindow := false
@@ -118,21 +116,9 @@ func Run(p Platform, r Renderer, scraper *prometheus.Scraper, processor *process
 			imgui.Text("\t")
 			imgui.Separator()
 
-			renderProcessorOptions()
+			renderProcessorOptions(procInfo)
 
-			//imgui.Checkbox("Demo Window", &showDemoWindow) // Edit bools storing our window open/close state
-			//imgui.Checkbox("Another Window", &showAnotherWindow)
-			//	imgui
-			//imgui.SliderFloat("float", &f, 0.0, 1.0) // Edit one float using a slider from 0.0f to 1.0f
-			// TODO add example of ColorEdit3 for clearColor
-
-			//if imgui.Button("Button") { // Buttons return true when clicked (most widgets return true when edited/activated)
-			//		counter++
-			//	}
-			//	imgui.SameLine()
-			//imgui.Text(fmt.Sprintf("counter = %d", counter))
-
-			// TODO add text of FPS based on IO.Framerate()
+			renderStartStopButtons(scraper)
 
 			imgui.End()
 		}
@@ -312,12 +298,14 @@ func renderPrometheusOptions(scraper *prometheus.Scraper) {
 
 	imgui.Text("\t")
 
-	if imgui.ListBoxV("\t", &prometheusModePos, prometheusModes, 2) {
-		if processorModes[prometheusModePos] == "Live" {
+	if imgui.ListBoxV(" ", &prometheusModePos, prometheusModes, 2) {
+		if prometheusModes[prometheusModePos] == "Live" {
 			prometheusMode = prometheus.Live
-		} else {
+		}
+		if prometheusModes[prometheusModePos] == "Playback" {
 			prometheusMode = prometheus.Playback
 		}
+		log.Printf("Mode changed to %s\n", prometheusModes[prometheusModePos])
 	}
 
 	if prometheusMode == prometheus.Playback {
@@ -331,6 +319,42 @@ func renderPrometheusOptions(scraper *prometheus.Scraper) {
 		imgui.InputText("  ", &prometheusEndDate)
 
 	}
+
+}
+
+/*renderProcessorOptions displays all the configurable options for sound generation. */
+func renderProcessorOptions(procInfo *processor.ProcInfo) {
+
+	imgui.Text("Processor Musical Options:")
+	imgui.Text("\t")
+	imgui.Text("Key:")
+
+	if imgui.ListBoxV("  ", &processorKeysPos, procInfo.GetKeyNames(), 5) {
+
+		message := processor.ControlMessage{Type: processor.SetKey, ValueNum: int(processorKeysPos), ValueString: ""}
+		procInfo.Control <- message
+
+	}
+
+	imgui.Text("\t")
+	imgui.Text("Mode:")
+
+	if imgui.ListBoxV("   ", &processorModePos, procInfo.GetModeNames(), 5) {
+
+		message := processor.ControlMessage{Type: processor.SetMode, ValueNum: 0, ValueString: processorModes[processorModePos]}
+		procInfo.Control <- message
+
+	}
+	imgui.Text("\t")
+	/*
+		imgui.Text("Type of Generation:")
+		if imgui.ListBoxV("    ", &processorGenerationTypePos, processorGenerationTypes, -1) {
+			processorGenerationType = processorGenerationTypes[processorModePos]
+		}
+	*/
+}
+
+func renderStartStopButtons(scraper *prometheus.Scraper) {
 
 	imgui.Text("\t")
 
@@ -351,29 +375,5 @@ func renderPrometheusOptions(scraper *prometheus.Scraper) {
 		messageStop := prometheus.ControlMessage{Type: prometheus.StopOutput, OutputType: prometheus.Playback, QueryInfo: prometheus.QueryInfo{}, Value: 0}
 		scraper.Control <- messageStop
 
-	}
-}
-
-/*renderProcessorOptions displays all the configurable options for sound generation. */
-func renderProcessorOptions() {
-
-	imgui.Text("Processor Musical Options:")
-	imgui.Text("\t")
-
-	imgui.Text("Key:")
-	if imgui.ListBoxV("  ", &processorKeysPos, processorKeys, 1) {
-		processorKey = processorKeys[processorKeysPos]
-	}
-	imgui.Text("\t")
-
-	imgui.Text("Mode:")
-	if imgui.ListBoxV("   ", &processorModePos, processorModes, 1) {
-		processorMode = processorModes[processorModePos]
-	}
-	imgui.Text("\t")
-
-	imgui.Text("Type of Generation:")
-	if imgui.ListBoxV("    ", &processorGenerationTypePos, processorGenerationTypes, -1) {
-		processorGenerationType = processorGenerationTypes[processorModePos]
 	}
 }

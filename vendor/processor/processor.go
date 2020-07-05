@@ -3,9 +3,12 @@ package processor
 import (
 	"container/list"
 	"fmt"
+	"log"
 	"math"
 	"midioutput"
 	"time"
+
+	"github.com/elliotchance/orderedmap"
 )
 
 /*noteIndexes Fixed values used to transpose scales into different keys */
@@ -35,9 +38,7 @@ type Scale struct {
 
 /*Config Defines the format of the process */
 type Config struct {
-	DefaultKey   string  `yaml:"default_key"`
-	DefaultScale string  `yaml:"default_scale"`
-	Scales       []Scale `yaml:"scales"`
+	Scales []Scale `yaml:"scales"`
 }
 
 type eventType int
@@ -71,16 +72,17 @@ type MessageType int
 
 /* Used to nicely assign values to message types */
 const (
-	StartOutput      MessageType = 0
-	StopOutput       MessageType = 1
-	ChangePollRate   MessageType = 2
-	ChangeOutputRate MessageType = 3
+	SetKey          MessageType = 0
+	SetMode         MessageType = 1
+	SetVelocityMode MessageType = 2
+	SetBPM          MessageType = 3
 )
 
 /*ControlMessage Used for sending control messages to processor.*/
 type ControlMessage struct {
-	Type  MessageType
-	Value float64
+	Type        MessageType
+	ValueNum    int
+	ValueString string
 }
 
 /*scaleMap Used for storing all useful information of a scale. */
@@ -109,13 +111,13 @@ const maxPreviousValues = 20
 
 /*ProcInfo Holds input/output info and generation parameters.*/
 type ProcInfo struct {
-	control             <-chan ControlMessage
+	Control             chan ControlMessage
 	input               <-chan float64
 	output              chan<- midioutput.MIDIMessage
 	BPM                 float64
 	TickInc             time.Duration
 	tick                float64
-	scales              map[string]scaleMap
+	scales              *orderedmap.OrderedMap
 	activeScale         scaleMap
 	rootNoteOffset      int
 	velocitySensingMode velocityMode
@@ -125,24 +127,33 @@ type ProcInfo struct {
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(processorConfig Config, controlChannel <-chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MIDIMessage) *ProcInfo {
+func NewProcessor(processorConfig Config, controlChannel chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MIDIMessage) *ProcInfo {
 
 	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM,
-		defaultTick, 0, make(map[string]scaleMap), scaleMap{},
+		defaultTick, 0, orderedmap.NewOrderedMap(), scaleMap{},
 		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
 
 	processor.parseScales(processorConfig.Scales)
-	processor.generateNotesOfScale(noteIndexes[processorConfig.DefaultKey])
-
-	processor.activeScale = processor.scales[processorConfig.DefaultScale]
-
-	fmt.Printf("Active Scale: %v+\n", processor.activeScale)
+	processor.generateNotesOfScale(noteIndexes["C"])
+	processor.setScale("Chromatic")
 
 	go processor.controlThread()
 	go processor.generationThread()
 
 	return &processor
 
+}
+
+func (processor *ProcInfo) setScale(name string) {
+
+	scale, exists := processor.scales.Get(name)
+
+	if exists {
+		processor.activeScale = scale.(scaleMap)
+		log.Printf("Active Scale: %v+\n", processor.activeScale)
+	} else {
+		log.Printf("Scale not found (%s).", name)
+	}
 }
 
 /*parseScales Processes and stores the scales from the configuration file and generates note offset values for them. */
@@ -156,7 +167,7 @@ func (processor *ProcInfo) parseScales(scaleList []Scale) {
 		scaleMapping.intervals = scale.Intervals
 		scaleMapping.offsets = processor.getNoteOffsets(scaleMapping.intervals)
 
-		processor.scales[scale.Name] = scaleMapping
+		processor.scales.Set(scale.Name, scaleMapping)
 	}
 }
 
@@ -188,17 +199,29 @@ func (processor *ProcInfo) getNotes(rootOffset int, offsets []int) []string {
 /*initScaleTypes Initializes all scale types and offsets for a specific root note for later use. */
 func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex int) {
 
-	for key, scale := range processor.scales {
+	if rootNoteIndex <= len(noteIndexes) {
 
-		scale.notes = processor.getNotes(rootNoteIndex, scale.offsets)
-		processor.scales[key] = scale
+		for _, key := range processor.scales.Keys() {
 
-		fmt.Printf("Scale Name: %s\n Intervals:\t %v\n Offsets:\t %v\n Notes:\t\t %v \n", scale.name, scale.intervals, scale.offsets, scale.notes)
+			scale, exists := processor.scales.Get(key)
+
+			if exists {
+
+				castedScale := scale.(scaleMap)
+
+				castedScale.notes = processor.getNotes(rootNoteIndex, castedScale.offsets)
+				processor.scales.Set(key, castedScale)
+
+				fmt.Printf("Scale Name: %s\n Intervals:\t %v\n Offsets:\t %v\n Notes:\t\t %v \n", castedScale.name, castedScale.intervals, castedScale.offsets, castedScale.notes)
+			}
+		}
+
+		/* We need to store the root note offset so we can add it to the activeScale offset on when sending a note otherwise everything would be in C. */
+		processor.rootNoteOffset = int(rootNoteIndex)
+
+	} else {
+		log.Printf("Invalid note index (%d) doing nothing. \n", rootNoteIndex)
 	}
-
-	/* We need to store the root note offset so we can add it to the activeScale offset on when sending a note otherwise everything would be in C. */
-	processor.rootNoteOffset = int(rootNoteIndex)
-
 }
 
 /*
@@ -239,9 +262,13 @@ func (processor *ProcInfo) getMinorTriad(note int) {
 						of the total velocity range to see how it sounds.
 */
 func (processor *ProcInfo) getVelocity(value float64) int64 {
+
 	switch processor.velocitySensingMode {
+
 	case fixed:
+
 		return defaultVelocity
+
 	case singleNoteVariance:
 
 		if processor.previousValues.Front() != nil && processor.previousValues.Len() > 1 {
@@ -284,9 +311,53 @@ func (processor *ProcInfo) getVelocity(value float64) int64 {
 func (processor *ProcInfo) controlThread() {
 
 	for {
-		message := <-processor.control
-		fmt.Printf("Received Message: %v\n", message.Value)
+		message := <-processor.Control
+		fmt.Printf("Received Message: %v\n", message)
+
+		switch message.Type {
+
+		case SetKey:
+
+			processor.generateNotesOfScale(message.ValueNum)
+
+		case SetMode:
+
+			scale, exists := processor.scales.Get(message.ValueString)
+
+			if exists {
+
+				log.Printf("Setting mode to %s.", message.ValueString)
+				processor.activeScale = scale.(scaleMap)
+
+			} else {
+				log.Printf("Scale doesn't exist (%v)\n", message.ValueString)
+			}
+
+		case SetBPM:
+
+		case SetVelocityMode:
+
+		}
 	}
+}
+
+/*GetKeyNames Returns an array of key names for the front end. */
+func (processor *ProcInfo) GetKeyNames() []string {
+	return notes[:12]
+}
+
+/*GetModeNames Returns an array of mode names for the front end. */
+func (processor *ProcInfo) GetModeNames() []string {
+
+	names := make([]string, processor.scales.Len())
+	i := 0
+
+	for _, key := range processor.scales.Keys() {
+		names[i] = key.(string)
+		i++
+	}
+
+	return names
 }
 
 /*generationThread Handles event processing and timing of note emission acting like a sequencer for notes.*/

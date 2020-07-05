@@ -63,14 +63,6 @@ func loadConfig(path string) *config {
 		log.Fatal("Configuration file invalid: No Prometheus server is defined.\n")
 	}
 
-	if c.ProcessorConfig.DefaultKey == "" {
-		log.Fatal("Processor configuration doesn't contain a valid default key.\n")
-	}
-
-	if c.ProcessorConfig.DefaultScale == "" {
-		log.Fatal("Processor configuration doesn't contain a valid default scale.\n")
-	}
-
 	if len(c.ProcessorConfig.Scales) < 1 {
 		log.Fatal("Processor configuration doesn't contain any scale definitions.\n")
 	}
