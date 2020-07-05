@@ -3,6 +3,7 @@ package prometheus
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -147,7 +148,7 @@ func (collector *Scraper) prometheusControlThread() {
 			collector.outputRate += message.Value
 
 		case StopOutput:
-			fmt.Printf("Stopping output thread..\n")
+			fmt.Printf("Stopping polling/output of new data.\n")
 			collector.isActive = false
 
 		default:
@@ -157,12 +158,12 @@ func (collector *Scraper) prometheusControlThread() {
 }
 
 /*  Stores the initial time series data, starts the output thread, and also the live playback query thread if required. */
-func (collector *Scraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) bool {
+func (collector *Scraper) queryPrometheus(mode OutputType, query string, start float64, end float64, step int) {
 
 	data := collector.getTimeSeriesData(query, start, end, step)
 
 	collector.populateRingBuffer(data)
-
+	log.Println("After popRingbuf call.")
 	if mode == Live {
 		fmt.Println("Running in live mode")
 		go collector.queryThread(query, step)
@@ -170,10 +171,11 @@ func (collector *Scraper) queryPrometheus(mode OutputType, query string, start f
 
 	go collector.outputThread()
 
-	return true
 }
 
-/* Gets the next item from the RingBuffer and emits it on the output channel. Then sleeps for a configurable duration. */
+/* Gets the next item from the RingBuffer and emits it on the output channel. Then sleeps for a configurable duration.
+   Also disposes of current RingBuffer and assigns a new one on exit. This stops the Ringbuffer filling up and freezing
+   the thread on multiple restarts. */
 func (collector *Scraper) outputThread() {
 	for {
 		if collector.isActive {
@@ -187,6 +189,10 @@ func (collector *Scraper) outputThread() {
 			time.Sleep(time.Duration(collector.outputRate) * time.Millisecond)
 
 		} else {
+
+			collector.data.Dispose()
+			collector.data = queue.NewRingBuffer(defaultRingSize)
+
 			return
 		}
 	}
@@ -203,6 +209,7 @@ func (collector *Scraper) queryThread(query string, step int) {
 
 			time.Sleep(time.Duration(collector.pollRate) * time.Millisecond)
 		} else {
+			log.Println("Exiting query thread.")
 			return
 		}
 	}

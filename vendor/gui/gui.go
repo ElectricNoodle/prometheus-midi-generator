@@ -1,6 +1,8 @@
 package gui
 
 import (
+	"fmt"
+	"log"
 	"midioutput"
 	"processor"
 	"prometheus"
@@ -55,17 +57,14 @@ var midiDevicesPos int32
 var prometheusPollRatePos int32
 var prometheusPollRate = 4000
 
-var metric = "pf_current_entries_total{instance=~'sovapn1:9116'}"
-
-var prometheusPollRates = []int{4000, 5000, 6000, 7000, 8000}
-var prometheusPollRatesString = []string{"4000", "5000", "6000", "7000", "8000"}
+var metric = "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})"
 
 var prometheusModePos int32
-var prometheusMode = "Live"
+var prometheusMode = prometheus.Live
 var prometheusModes = []string{"Live", "Playback"}
 
-var prometheusStartDate = "2019-11-25 12:00"
-var prometheusEndDate = "2019-11-30 12:00"
+var prometheusStartDate = "2020-06-01 00:00"
+var prometheusEndDate = "2020-06-30 23:59"
 
 var processorKeysPos int32
 var processorKey = "C"
@@ -289,7 +288,20 @@ func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
 	imgui.Text("\t")
 
 }
+func parseDateString(dateString string) float64 {
 
+	layout := "2006-01-02 15:04"
+	t, err := time.Parse(layout, dateString)
+
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	fmt.Println(t)
+
+	return float64(t.Unix())
+}
 func renderPrometheusOptions(scraper *prometheus.Scraper) {
 
 	imgui.Text("Prometheus Configuration:")
@@ -300,35 +312,34 @@ func renderPrometheusOptions(scraper *prometheus.Scraper) {
 
 	imgui.Text("\t")
 
-	imgui.Text("Poll Rate (ms): ")
-	if imgui.ListBoxV(" ", &prometheusPollRatePos, prometheusPollRatesString, 1) {
-		prometheusPollRate = prometheusPollRates[prometheusPollRatePos]
-	}
-
-	imgui.Text("\t")
-
 	if imgui.ListBoxV("\t", &prometheusModePos, prometheusModes, 2) {
-		prometheusMode = prometheusModes[prometheusModePos]
+		if processorModes[prometheusModePos] == "Live" {
+			prometheusMode = prometheus.Live
+		} else {
+			prometheusMode = prometheus.Playback
+		}
 	}
 
-	if prometheusMode == "Playback" {
+	if prometheusMode == prometheus.Playback {
 
 		imgui.Text("\t")
 		imgui.Text("Start Time: ")
-		imgui.InputText("", &prometheusStartDate)
+		imgui.InputText(" ", &prometheusStartDate)
 
 		imgui.Text("\t")
 		imgui.Text("End Time:   ")
-		imgui.InputText("", &prometheusEndDate)
+		imgui.InputText("  ", &prometheusEndDate)
 
 	}
 
 	imgui.Text("\t")
 
 	if imgui.Button("Start") {
-		queryInfo := prometheus.QueryInfo{Query: "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})", Start: 1590969600, End: 1593475200, Step: 600}
-		messageStart := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheus.Live, QueryInfo: queryInfo, Value: 0}
-		scraper.Control <- messageStart
+
+		queryInfo := prometheus.QueryInfo{Query: metric, Start: parseDateString(prometheusStartDate), End: parseDateString(prometheusEndDate), Step: 600}
+		message := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheusMode, QueryInfo: queryInfo, Value: 0}
+		scraper.Control <- message
+
 	}
 
 	imgui.SameLine()
