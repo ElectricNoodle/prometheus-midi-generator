@@ -2,14 +2,15 @@ package processor
 
 import (
 	"container/list"
-	"fmt"
-	"log"
+	"logging"
 	"math"
 	"midioutput"
 	"time"
 
 	"github.com/elliotchance/orderedmap"
 )
+
+var log *logging.Logger
 
 /*noteIndexes Fixed values used to transpose scales into different keys */
 var noteIndexes = map[string]int{
@@ -127,8 +128,9 @@ type ProcInfo struct {
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(processorConfig Config, controlChannel chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MIDIMessage) *ProcInfo {
+func NewProcessor(logIn *logging.Logger, processorConfig Config, controlChannel chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MIDIMessage) *ProcInfo {
 
+	log = logIn
 	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM,
 		defaultTick, 0, orderedmap.NewOrderedMap(), scaleMap{},
 		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
@@ -149,8 +151,12 @@ func (processor *ProcInfo) setScale(name string) {
 	scale, exists := processor.scales.Get(name)
 
 	if exists {
+
 		processor.activeScale = scale.(scaleMap)
-		log.Printf("Active Scale: %v+\n", processor.activeScale)
+
+		log.Printf("Using %s scale in the key of %s.\n", processor.activeScale.name, notes[processor.rootNoteOffset])
+		log.Printf("Notes: %v\n", processor.activeScale.notes)
+
 	} else {
 		log.Printf("Scale not found (%s).", name)
 	}
@@ -212,7 +218,6 @@ func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex int) {
 				castedScale.notes = processor.getNotes(rootNoteIndex, castedScale.offsets)
 				processor.scales.Set(key, castedScale)
 
-				fmt.Printf("Scale Name: %s\n Intervals:\t %v\n Offsets:\t %v\n Notes:\t\t %v \n", castedScale.name, castedScale.intervals, castedScale.offsets, castedScale.notes)
 			}
 		}
 
@@ -312,26 +317,16 @@ func (processor *ProcInfo) controlThread() {
 
 	for {
 		message := <-processor.Control
-		fmt.Printf("Received Message: %v\n", message)
 
 		switch message.Type {
 
 		case SetKey:
 
 			processor.generateNotesOfScale(message.ValueNum)
+			processor.setScale(processor.activeScale.name)
 
 		case SetMode:
-
-			scale, exists := processor.scales.Get(message.ValueString)
-
-			if exists {
-
-				log.Printf("Setting mode to %s.", message.ValueString)
-				processor.activeScale = scale.(scaleMap)
-
-			} else {
-				log.Printf("Scale doesn't exist (%v)\n", message.ValueString)
-			}
+			processor.setScale(message.ValueString)
 
 		case SetBPM:
 
@@ -395,7 +390,7 @@ func (processor *ProcInfo) processMessage(value float64) {
 	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
 
 	processor.insertEvent(event)
-	fmt.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+	log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
 
 	processor.addToPreviousValues(value)
 }
@@ -418,7 +413,7 @@ func (processor *ProcInfo) handleEvents() {
 
 				if e.duration == 1 {
 
-					fmt.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
+					log.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
 					processor.output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOff, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 50}
@@ -432,7 +427,7 @@ func (processor *ProcInfo) handleEvents() {
 		if (event{}) != e {
 			if e.state == ready {
 
-				fmt.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
+				log.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
 
 				processor.events[i].state = active
 				processor.output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
@@ -456,7 +451,7 @@ func (processor *ProcInfo) insertEvent(eventIn event) {
 
 func (processor *ProcInfo) incrementTick() {
 
-	//fmt.Printf("Tick: %f \n", processor.tick)
+	//log.Printf("Tick: %f \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
 	time.Sleep(processor.TickInc * time.Millisecond)

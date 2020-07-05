@@ -1,3 +1,4 @@
+
 prometheus_server: "192.168.150.187:9090"
 processor_config:
   default_key: "C"

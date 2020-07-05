@@ -2,14 +2,15 @@ package prometheus
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"logging"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/golang-collections/go-datastructures/queue"
 )
+
+var log *logging.Logger
 
 type metric struct {
 	Instance string
@@ -100,7 +101,7 @@ func (tp *point) UnmarshalJSON(data []byte) error {
 	var v []interface{}
 
 	if err := json.Unmarshal(data, &v); err != nil {
-		fmt.Printf("Error while decoding Point %v\n", err)
+		log.Printf("Error while decoding Point %v\n", err)
 		return err
 	}
 
@@ -111,8 +112,9 @@ func (tp *point) UnmarshalJSON(data []byte) error {
 }
 
 /*NewScraper Initializes a new instance of the scraper struct and starts the control thread. */
-func NewScraper(server string, mode OutputType, controlChannel chan ControlMessage, outputChannel chan<- float64) *Scraper {
+func NewScraper(logIn *logging.Logger, server string, mode OutputType, controlChannel chan ControlMessage, outputChannel chan<- float64) *Scraper {
 
+	log = logIn
 	queryEndpoint := "http://" + server + "/api/v1/query_range"
 	scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate, true}
 
@@ -131,28 +133,28 @@ func (collector *Scraper) prometheusControlThread() {
 
 		case StartOutput:
 
-			fmt.Printf("Starting output thread.. Playback Type: %d\n", message.OutputType)
-			fmt.Printf("Query: %s Start: %f Stop: %f Step: %d \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
+			log.Printf("Starting output thread.. Playback Type: %d\n", message.OutputType)
+			log.Printf("Query: %s Start: %f Stop: %f Step: %d \n", message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
 
 			collector.isActive = true
 			collector.queryPrometheus(message.OutputType, message.QueryInfo.Query, message.QueryInfo.Start, message.QueryInfo.End, message.QueryInfo.Step)
 
 		case ChangePollRate:
 
-			fmt.Printf("Changing PollRate to (%d) \n", message.Value)
+			log.Printf("Changing PollRate to (%d) \n", message.Value)
 			collector.pollRate = message.Value
 
 		case ChangeOutputRate:
 
-			fmt.Printf("Changing OutputRate to (%d) \n", message.Value)
+			log.Printf("Changing OutputRate to (%d) \n", message.Value)
 			collector.outputRate = message.Value
 
 		case StopOutput:
-			fmt.Printf("Stopping polling/output of new data.\n")
+			log.Printf("Stopping polling/output of new data.\n")
 			collector.isActive = false
 
 		default:
-			fmt.Printf("Unknown MessageType: (%d \n", message.Type)
+			log.Printf("Unknown MessageType: (%d \n", message.Type)
 		}
 	}
 }
@@ -164,7 +166,7 @@ func (collector *Scraper) queryPrometheus(mode OutputType, query string, start f
 	collector.populateRingBuffer(data)
 
 	if mode == Live {
-		fmt.Println("Running in live mode")
+		log.Println("Running in live mode")
 		go collector.queryThread(query, step)
 	}
 
@@ -181,7 +183,7 @@ func (collector *Scraper) outputThread() {
 			item, err := collector.data.Get()
 
 			if err != nil {
-				fmt.Printf("Error: %s", err)
+				log.Printf("Error: %s", err)
 			}
 
 			collector.output <- item.(float64)
@@ -216,7 +218,7 @@ func (collector *Scraper) queryThread(query string, step int) {
 
 func (collector *Scraper) populateRingBuffer(data []point) {
 	for _, point := range data {
-		//fmt.Printf("PromValue: %f\n", point.Value)
+		//log.Printf("PromValue: %f\n", point.Value)
 		collector.data.Put(point.Value)
 	}
 }
@@ -229,7 +231,7 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 	request, err := http.NewRequest("GET", collector.Target, nil)
 
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		log.Printf("%s\n", err)
 		return []point{}
 	}
 
@@ -245,7 +247,7 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 	result, err := httpClient.Do(request)
 
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
+		log.Printf("Error: %s\n", err)
 		return []point{}
 	}
 
@@ -256,7 +258,7 @@ func (collector *Scraper) getTimeSeriesData(query string, start float64, end flo
 	e := json.NewDecoder(result.Body).Decode(&apiResponse)
 
 	if e != nil {
-		fmt.Printf("Error: %s\n", e)
+		log.Printf("Error: %s\n", e)
 		return []point{}
 	}
 	/* Need to check that return value is valid before returning. */

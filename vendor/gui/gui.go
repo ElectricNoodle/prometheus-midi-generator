@@ -1,8 +1,7 @@
 package gui
 
 import (
-	"fmt"
-	"log"
+	"logging"
 	"midioutput"
 	"processor"
 	"prometheus"
@@ -11,6 +10,8 @@ import (
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/inkyblackness/imgui-go"
 )
+
+var log *logging.Logger
 
 // Platform covers mouse/keyboard/gamepad inputs, cursor shape, timing, windowing.
 type Platform interface {
@@ -52,6 +53,9 @@ type Renderer interface {
 	Render(displaySize [2]float32, framebufferSize [2]float32, drawData imgui.DrawData)
 }
 
+var logText = ""
+var autoScroll = true
+var consoleEnabled = false
 var midiDevicesPos int32
 
 var prometheusPollRatePos int32
@@ -77,8 +81,10 @@ var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
+func Run(p Platform, r Renderer, log *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
+
+	go loggingThread(log)
 
 	showDemoWindow := false
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
@@ -99,9 +105,18 @@ func Run(p Platform, r Renderer, scraper *prometheus.Scraper, procInfo *processo
 			imgui.ShowDemoWindow(&showDemoWindow)
 		}
 
+		if consoleEnabled {
+			renderConsoleWindow()
+		}
+
 		{
-			imgui.Begin("Prometheus Fractal/MIDI Generator")                                     // Create a window called "Hello, world!" and append into it.
-			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.") // Display some text
+			imgui.Begin("Prometheus Fractal/MIDI Generator")
+			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.")
+			imgui.Text("\t\t")
+
+			if imgui.Checkbox("Enable logging console.", &consoleEnabled) {
+
+			}
 
 			imgui.Text("\t\t")
 			imgui.Separator()
@@ -148,6 +163,156 @@ func Run(p Platform, r Renderer, scraper *prometheus.Scraper, procInfo *processo
 
 		// sleep to avoid 100% CPU usage for this demo
 		<-time.After(time.Millisecond * 25)
+	}
+}
+func loggingThread(log *logging.Logger) {
+	for {
+
+		message := <-log.Channel
+
+		if consoleEnabled {
+			logText = logText + message
+		}
+	}
+}
+
+/*renderConsoleWindow Used to display log messages */
+func renderConsoleWindow() {
+
+	imgui.Begin("Logging Console")
+
+	if imgui.Checkbox("Autoscroll", &autoScroll) {
+
+	}
+
+	imgui.BeginChild("unformatted")
+	imgui.Text(logText)
+
+	if autoScroll && imgui.GetScrollMaxY() > 0 {
+
+		imgui.SetScrollHereY(1.0)
+
+	}
+
+	imgui.EndChild()
+	imgui.End()
+}
+
+func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
+
+	imgui.Text("MIDI Configuration:")
+	imgui.Text("\t")
+	imgui.Text("Select Device: ")
+
+	if imgui.ListBoxV("", &midiDevicesPos, midiEmitter.GetDeviceNames(), 2) {
+
+		midiEmitter.Control <- midioutput.MIDIControlMessage{Type: midioutput.SetDevice, Value: int(midiDevicesPos)}
+
+	}
+
+	imgui.Text("\t")
+
+}
+
+func renderPrometheusOptions(scraper *prometheus.Scraper) {
+
+	imgui.Text("Prometheus Configuration:")
+	imgui.Text("\t")
+
+	imgui.Text("Metric:    ")
+	imgui.InputText("", &metric)
+
+	imgui.Text("\t")
+
+	if imgui.ListBoxV(" ", &prometheusModePos, prometheusModes, 2) {
+		if prometheusModes[prometheusModePos] == "Live" {
+			prometheusMode = prometheus.Live
+		}
+		if prometheusModes[prometheusModePos] == "Playback" {
+			prometheusMode = prometheus.Playback
+		}
+	}
+
+	if prometheusMode == prometheus.Playback {
+
+		imgui.Text("\t")
+		imgui.Text("Start Time: ")
+		imgui.InputText(" ", &prometheusStartDate)
+
+		imgui.Text("\t")
+		imgui.Text("End Time:   ")
+		imgui.InputText("  ", &prometheusEndDate)
+
+	}
+
+}
+
+func parseDateString(dateString string) float64 {
+
+	layout := "2006-01-02 15:04"
+	t, err := time.Parse(layout, dateString)
+
+	if err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	return float64(t.Unix())
+}
+
+/*renderProcessorOptions displays all the configurable options for sound generation. */
+func renderProcessorOptions(procInfo *processor.ProcInfo) {
+
+	imgui.Text("Processor Musical Options:")
+	imgui.Text("\t")
+	imgui.Text("Key:")
+
+	if imgui.ListBoxV("  ", &processorKeysPos, procInfo.GetKeyNames(), 5) {
+
+		message := processor.ControlMessage{Type: processor.SetKey, ValueNum: int(processorKeysPos), ValueString: ""}
+		procInfo.Control <- message
+
+	}
+
+	imgui.Text("\t")
+	imgui.Text("Mode:")
+
+	if imgui.ListBoxV("   ", &processorModePos, procInfo.GetModeNames(), 5) {
+
+		message := processor.ControlMessage{Type: processor.SetMode, ValueNum: 0, ValueString: procInfo.GetModeNames()[processorModePos]}
+		procInfo.Control <- message
+
+	}
+	imgui.Text("\t")
+	/*
+		imgui.Text("Type of Generation:")
+		if imgui.ListBoxV("    ", &processorGenerationTypePos, processorGenerationTypes, -1) {
+			processorGenerationType = processorGenerationTypes[processorModePos]
+		}
+	*/
+}
+
+func renderStartStopButtons(scraper *prometheus.Scraper) {
+
+	imgui.Text("\t")
+
+	if imgui.Button("Start") {
+
+		queryInfo := prometheus.QueryInfo{Query: metric, Start: parseDateString(prometheusStartDate), End: parseDateString(prometheusEndDate), Step: 600}
+		message := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheusMode, QueryInfo: queryInfo, Value: 0}
+		scraper.Control <- message
+
+	}
+
+	imgui.SameLine()
+	imgui.Text(" ")
+	imgui.SameLine()
+
+	if imgui.Button("Stop") {
+
+		messageStop := prometheus.ControlMessage{Type: prometheus.StopOutput, OutputType: prometheus.Playback, QueryInfo: prometheus.QueryInfo{}, Value: 0}
+		scraper.Control <- messageStop
+
 	}
 }
 
@@ -257,123 +422,4 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 	gl.Viewport(lastViewport[0], lastViewport[1], lastViewport[2], lastViewport[3])
 	gl.Scissor(lastScissorBox[0], lastScissorBox[1], lastScissorBox[2], lastScissorBox[3])
 
-}
-
-func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
-
-	imgui.Text("MIDI Configuration:")
-	imgui.Text("\t")
-	imgui.Text("Select Device: ")
-
-	if imgui.ListBoxV("", &midiDevicesPos, midiEmitter.GetDeviceNames(), 2) {
-
-		midiEmitter.Control <- midioutput.MIDIControlMessage{Type: midioutput.SetDevice, Value: int(midiDevicesPos)}
-
-	}
-
-	imgui.Text("\t")
-
-}
-func parseDateString(dateString string) float64 {
-
-	layout := "2006-01-02 15:04"
-	t, err := time.Parse(layout, dateString)
-
-	if err != nil {
-		log.Println(err)
-		return 0
-	}
-
-	fmt.Println(t)
-
-	return float64(t.Unix())
-}
-func renderPrometheusOptions(scraper *prometheus.Scraper) {
-
-	imgui.Text("Prometheus Configuration:")
-	imgui.Text("\t")
-
-	imgui.Text("Metric:    ")
-	imgui.InputText("", &metric)
-
-	imgui.Text("\t")
-
-	if imgui.ListBoxV(" ", &prometheusModePos, prometheusModes, 2) {
-		if prometheusModes[prometheusModePos] == "Live" {
-			prometheusMode = prometheus.Live
-		}
-		if prometheusModes[prometheusModePos] == "Playback" {
-			prometheusMode = prometheus.Playback
-		}
-		log.Printf("Mode changed to %s\n", prometheusModes[prometheusModePos])
-	}
-
-	if prometheusMode == prometheus.Playback {
-
-		imgui.Text("\t")
-		imgui.Text("Start Time: ")
-		imgui.InputText(" ", &prometheusStartDate)
-
-		imgui.Text("\t")
-		imgui.Text("End Time:   ")
-		imgui.InputText("  ", &prometheusEndDate)
-
-	}
-
-}
-
-/*renderProcessorOptions displays all the configurable options for sound generation. */
-func renderProcessorOptions(procInfo *processor.ProcInfo) {
-
-	imgui.Text("Processor Musical Options:")
-	imgui.Text("\t")
-	imgui.Text("Key:")
-
-	if imgui.ListBoxV("  ", &processorKeysPos, procInfo.GetKeyNames(), 5) {
-
-		message := processor.ControlMessage{Type: processor.SetKey, ValueNum: int(processorKeysPos), ValueString: ""}
-		procInfo.Control <- message
-
-	}
-
-	imgui.Text("\t")
-	imgui.Text("Mode:")
-
-	if imgui.ListBoxV("   ", &processorModePos, procInfo.GetModeNames(), 5) {
-
-		message := processor.ControlMessage{Type: processor.SetMode, ValueNum: 0, ValueString: processorModes[processorModePos]}
-		procInfo.Control <- message
-
-	}
-	imgui.Text("\t")
-	/*
-		imgui.Text("Type of Generation:")
-		if imgui.ListBoxV("    ", &processorGenerationTypePos, processorGenerationTypes, -1) {
-			processorGenerationType = processorGenerationTypes[processorModePos]
-		}
-	*/
-}
-
-func renderStartStopButtons(scraper *prometheus.Scraper) {
-
-	imgui.Text("\t")
-
-	if imgui.Button("Start") {
-
-		queryInfo := prometheus.QueryInfo{Query: metric, Start: parseDateString(prometheusStartDate), End: parseDateString(prometheusEndDate), Step: 600}
-		message := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheusMode, QueryInfo: queryInfo, Value: 0}
-		scraper.Control <- message
-
-	}
-
-	imgui.SameLine()
-	imgui.Text(" ")
-	imgui.SameLine()
-
-	if imgui.Button("Stop") {
-
-		messageStop := prometheus.ControlMessage{Type: prometheus.StopOutput, OutputType: prometheus.Playback, QueryInfo: prometheus.QueryInfo{}, Value: 0}
-		scraper.Control <- messageStop
-
-	}
 }

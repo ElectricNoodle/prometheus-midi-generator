@@ -6,7 +6,7 @@ import (
 	"gui/platforms"
 	"gui/renderers"
 	"io/ioutil"
-	"log"
+	"logging"
 	"midioutput"
 	"os"
 	"processor"
@@ -23,6 +23,7 @@ type config struct {
 
 var configuration *config
 
+var log *logging.Logger
 var prometheusScraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
 var midiEmitter *midioutput.MIDIEmitter
@@ -35,12 +36,13 @@ var processorOutputChannel chan midioutput.MIDIMessage
 
 var midiControlChannel chan midioutput.MIDIControlMessage
 
+var guiLogChannel chan string
+
 func main() {
 
 	configuration = loadConfig("config/config.yml")
 
 	initializeBackend()
-
 	initializeGUI()
 
 }
@@ -89,9 +91,11 @@ func initializeBackend() {
 
 	midiControlChannel = make(chan midioutput.MIDIControlMessage, 6)
 
-	prometheusScraper = prometheus.NewScraper(configuration.PrometheusServer, prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
-	metricProcessor = processor.NewProcessor(configuration.ProcessorConfig, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
-	midiEmitter = midioutput.NewMidi(midiControlChannel, processorOutputChannel)
+	log = logging.NewLogger()
+
+	prometheusScraper = prometheus.NewScraper(log, configuration.PrometheusServer, prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
+	metricProcessor = processor.NewProcessor(log, configuration.ProcessorConfig, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
+	midiEmitter = midioutput.NewMidi(log, midiControlChannel, processorOutputChannel)
 
 	fmt.Printf("%s\n", prometheusScraper.Target)
 	fmt.Printf("%f\n", metricProcessor.BPM)
@@ -100,6 +104,7 @@ func initializeBackend() {
 }
 
 func initializeGUI() {
+
 	context := imgui.CreateContext(nil)
 	defer context.Destroy()
 	io := imgui.CurrentIO()
@@ -122,5 +127,5 @@ func initializeGUI() {
 
 	defer renderer.Dispose()
 
-	gui.Run(platform, renderer, prometheusScraper, metricProcessor, midiEmitter)
+	gui.Run(platform, renderer, log, prometheusScraper, metricProcessor, midiEmitter)
 }

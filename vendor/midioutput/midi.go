@@ -1,10 +1,12 @@
 package midioutput
 
 import (
-	"log"
+	"logging"
 
 	"github.com/rakyll/portmidi"
 )
+
+var log *logging.Logger
 
 type octaveOffset int
 
@@ -90,8 +92,9 @@ type MIDIEmitter struct {
 var maxDevices = 10
 
 /*NewMidi Returns a new instance of midi struct, and inits midi connection. */
-func NewMidi(controlChannel chan MIDIControlMessage, inputChannel <-chan MIDIMessage) *MIDIEmitter {
+func NewMidi(logIn *logging.Logger, controlChannel chan MIDIControlMessage, inputChannel <-chan MIDIMessage) *MIDIEmitter {
 
+	log = logIn
 	midiEmitter := MIDIEmitter{controlChannel, inputChannel, []midiDevice{}, 0, 0, nil}
 
 	midiEmitter.initMIDI()
