@@ -59,7 +59,7 @@ var (
 
 	void main() {
 
-		frag_colour = vec4(iterateMandelbrot(coord),iterateMandelbrot(coord),iterateMandelbrot(coord),1.0);
+		frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3),iterateMandelbrot(coord),iterateMandelbrot(coord),1.0);
 
 	}
 	` + "\x00"
