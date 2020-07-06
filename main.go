@@ -24,19 +24,9 @@ type config struct {
 var configuration *config
 
 var log *logging.Logger
-var prometheusScraper *prometheus.Scraper
+var scraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
 var midiEmitter *midioutput.MIDIEmitter
-
-var prometheusControlChannel chan prometheus.ControlMessage
-var prometheusOutputChannel chan float64
-
-var processorControlChannel chan processor.ControlMessage
-var processorOutputChannel chan midioutput.MIDIMessage
-
-var midiControlChannel chan midioutput.MIDIControlMessage
-
-var guiLogChannel chan string
 
 func main() {
 
@@ -55,7 +45,7 @@ func loadConfig(path string) *config {
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
-	//fmt.Printf("%v\n", yamlFile)
+
 	err = yaml.Unmarshal(yamlFile, &c)
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
@@ -83,23 +73,11 @@ func loadConfig(path string) *config {
 
 func initializeBackend() {
 
-	prometheusControlChannel = make(chan prometheus.ControlMessage, 6)
-	prometheusOutputChannel = make(chan float64, 600)
-
-	processorControlChannel = make(chan processor.ControlMessage, 6)
-	processorOutputChannel = make(chan midioutput.MIDIMessage, 6)
-
-	midiControlChannel = make(chan midioutput.MIDIControlMessage, 6)
-
 	log = logging.NewLogger()
 
-	prometheusScraper = prometheus.NewScraper(log, configuration.PrometheusServer, prometheus.Playback, prometheusControlChannel, prometheusOutputChannel)
-	metricProcessor = processor.NewProcessor(log, configuration.ProcessorConfig, processorControlChannel, prometheusOutputChannel, processorOutputChannel)
-	midiEmitter = midioutput.NewMidi(log, midiControlChannel, processorOutputChannel)
-
-	fmt.Printf("%s\n", prometheusScraper.Target)
-	fmt.Printf("%f\n", metricProcessor.BPM)
-	fmt.Printf("%v+\n", midiEmitter)
+	scraper = prometheus.NewScraper(log, configuration.PrometheusServer, prometheus.Playback)
+	metricProcessor = processor.NewProcessor(log, configuration.ProcessorConfig, scraper.Output)
+	midiEmitter = midioutput.NewMidi(log, metricProcessor.Output)
 
 }
 
@@ -109,7 +87,7 @@ func initializeGUI() {
 	defer context.Destroy()
 	io := imgui.CurrentIO()
 
-	platform, err := platforms.NewGLFW(io, platforms.GLFWClientAPIOpenGL2)
+	platform, err := platforms.NewGLFW(io, platforms.GLFWClientAPIOpenGL3)
 
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -118,7 +96,7 @@ func initializeGUI() {
 
 	defer platform.Dispose()
 
-	renderer, err := renderers.NewOpenGL2(io)
+	renderer, err := renderers.NewOpenGL3(io)
 
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -127,5 +105,5 @@ func initializeGUI() {
 
 	defer renderer.Dispose()
 
-	gui.Run(platform, renderer, log, prometheusScraper, metricProcessor, midiEmitter)
+	gui.Run(platform, renderer, log, scraper, metricProcessor, midiEmitter)
 }

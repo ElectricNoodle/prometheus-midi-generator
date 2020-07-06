@@ -1,17 +1,37 @@
 package gui
 
 import (
+	"fmt"
 	"logging"
 	"midioutput"
 	"processor"
 	"prometheus"
+	"strings"
 	"time"
 
-	"github.com/go-gl/gl/v2.1/gl"
+	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/inkyblackness/imgui-go"
 )
 
 var log *logging.Logger
+
+const (
+	vertexShaderSource = `
+    #version 410
+    in vec3 vp;
+    void main() {
+        gl_Position = vec4(vp, 1.0);
+    }
+` + "\x00"
+
+	fragmentShaderSource = `
+    #version 410
+    out vec4 frag_colour;
+    void main() {
+        frag_colour = vec4(1, 1, 1, 1);
+    }
+` + "\x00"
+)
 
 // Platform covers mouse/keyboard/gamepad inputs, cursor shape, timing, windowing.
 type Platform interface {
@@ -80,10 +100,40 @@ var processorGenerationTypePos int32
 var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
+type FractalRenderer struct {
+	glslVersion            string
+	fontTexture            uint32
+	shaderHandle           uint32
+	FractalShader          uint32
+	vertHandle             uint32
+	fragHandle             uint32
+	attribLocationTex      int32
+	attribLocationProjMtx  int32
+	attribLocationPosition int32
+	attribLocationUV       int32
+	attribLocationColor    int32
+	vboHandle              uint32
+	elementsHandle         uint32
+}
+
+var fractalRenderer FractalRenderer
+
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
 func Run(p Platform, r Renderer, log *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
+
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
+	fractalRenderer = FractalRenderer{glslVersion: "#version 150"}
+
+	/*	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
+		if err != nil {
+			panic(err)
+		}
+		fragmentShader, err := compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
+		if err != nil {
+			panic(err)
+		}
+	*/
 	go loggingThread(log)
 
 	showDemoWindow := false
@@ -180,11 +230,7 @@ func loggingThread(log *logging.Logger) {
 func renderConsoleWindow() {
 
 	imgui.Begin("Logging Console")
-
-	if imgui.Checkbox("Autoscroll", &autoScroll) {
-
-	}
-
+	imgui.Checkbox("Autoscroll", &autoScroll)
 	imgui.BeginChild("unformatted")
 	imgui.Text(logText)
 
@@ -206,7 +252,7 @@ func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
 
 	if imgui.ListBoxV("", &midiDevicesPos, midiEmitter.GetDeviceNames(), 2) {
 
-		midiEmitter.Control <- midioutput.MIDIControlMessage{Type: midioutput.SetDevice, Value: int(midiDevicesPos)}
+		midiEmitter.Control <- midioutput.ControlMessage{Type: midioutput.SetDevice, Value: int(midiDevicesPos)}
 
 	}
 
@@ -316,52 +362,15 @@ func renderStartStopButtons(scraper *prometheus.Scraper) {
 	}
 }
 
+func renderTest(displaySize [2]float32, framebufferSize [2]float32) {
+	log.Printf("")
+}
 func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 
-	//displayWidth, displayHeight := displaySize[0], displaySize[1]
 	fbWidth, fbHeight := framebufferSize[0], framebufferSize[1]
 	if (fbWidth <= 0) || (fbHeight <= 0) {
 		return
 	}
-
-	// Backup GL state
-	var lastActiveTexture int32
-	gl.GetIntegerv(gl.ACTIVE_TEXTURE, &lastActiveTexture)
-	gl.ActiveTexture(gl.TEXTURE0)
-	var lastProgram int32
-	gl.GetIntegerv(gl.CURRENT_PROGRAM, &lastProgram)
-	var lastTexture int32
-	gl.GetIntegerv(gl.TEXTURE_BINDING_2D, &lastTexture)
-	var lastSampler int32
-	gl.GetIntegerv(gl.SAMPLER_BINDING, &lastSampler)
-	var lastArrayBuffer int32
-	gl.GetIntegerv(gl.ARRAY_BUFFER_BINDING, &lastArrayBuffer)
-	var lastElementArrayBuffer int32
-	gl.GetIntegerv(gl.ELEMENT_ARRAY_BUFFER_BINDING, &lastElementArrayBuffer)
-	var lastVertexArray int32
-	gl.GetIntegerv(gl.VERTEX_ARRAY_BINDING, &lastVertexArray)
-	var lastPolygonMode [2]int32
-	gl.GetIntegerv(gl.POLYGON_MODE, &lastPolygonMode[0])
-	var lastViewport [4]int32
-	gl.GetIntegerv(gl.VIEWPORT, &lastViewport[0])
-	var lastScissorBox [4]int32
-	gl.GetIntegerv(gl.SCISSOR_BOX, &lastScissorBox[0])
-	var lastBlendSrcRgb int32
-	gl.GetIntegerv(gl.BLEND_SRC_RGB, &lastBlendSrcRgb)
-	var lastBlendDstRgb int32
-	gl.GetIntegerv(gl.BLEND_DST_RGB, &lastBlendDstRgb)
-	var lastBlendSrcAlpha int32
-	gl.GetIntegerv(gl.BLEND_SRC_ALPHA, &lastBlendSrcAlpha)
-	var lastBlendDstAlpha int32
-	gl.GetIntegerv(gl.BLEND_DST_ALPHA, &lastBlendDstAlpha)
-	var lastBlendEquationRgb int32
-	gl.GetIntegerv(gl.BLEND_EQUATION_RGB, &lastBlendEquationRgb)
-	var lastBlendEquationAlpha int32
-	gl.GetIntegerv(gl.BLEND_EQUATION_ALPHA, &lastBlendEquationAlpha)
-	lastEnableBlend := gl.IsEnabled(gl.BLEND)
-	lastEnableCullFace := gl.IsEnabled(gl.CULL_FACE)
-	lastEnableDepthTest := gl.IsEnabled(gl.DEPTH_TEST)
-	lastEnableScissorTest := gl.IsEnabled(gl.SCISSOR_TEST)
 
 	var vertices = []float64{
 		0.0, 0.5, 0.0,
@@ -369,57 +378,49 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 		-0.5, -0.5, 0.0,
 	}
 
-	var VBO uint32
-	var VAO uint32
-
-	//var test [20]int
-	gl.GenVertexArrays(1, &VAO)
-	gl.BindVertexArray(VAO)
-
 	gl.Viewport(0, 0, int32(fbWidth), int32(fbHeight))
 
-	gl.GenBuffers(1, &VBO)
-	gl.BindBuffer(gl.ARRAY_BUFFER, VBO)
-	gl.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.Ptr(vertices), gl.STATIC_DRAW)
+	var vbo uint32
+	gl.GenBuffers(1, &vbo)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.BufferData(gl.ARRAY_BUFFER, 4*len(vertices), gl.Ptr(vertices), gl.STATIC_DRAW)
+
+	var vao uint32
+
+	gl.GenVertexArrays(1, &vao)
+	gl.BindVertexArray(vao)
+
+	gl.EnableVertexAttribArray(0)
+	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
 
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-	gl.EnableVertexAttribArray(0)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
-	gl.DrawArrays(gl.TRIANGLES, 0, 3)
-	gl.DisableVertexAttribArray(0)
+	//gl.UseProgram(program)
 
-	// Restore modified GL state
-	gl.UseProgram(uint32(lastProgram))
-	gl.BindTexture(gl.TEXTURE_2D, uint32(lastTexture))
-	gl.BindSampler(0, uint32(lastSampler))
-	gl.ActiveTexture(uint32(lastActiveTexture))
-	gl.BindVertexArray(uint32(lastVertexArray))
-	gl.BindBuffer(gl.ARRAY_BUFFER, uint32(lastArrayBuffer))
-	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, uint32(lastElementArrayBuffer))
-	gl.BlendEquationSeparate(uint32(lastBlendEquationRgb), uint32(lastBlendEquationAlpha))
-	gl.BlendFuncSeparate(uint32(lastBlendSrcRgb), uint32(lastBlendDstRgb), uint32(lastBlendSrcAlpha), uint32(lastBlendDstAlpha))
-	if lastEnableBlend {
-		gl.Enable(gl.BLEND)
-	} else {
-		gl.Disable(gl.BLEND)
-	}
-	if lastEnableCullFace {
-		gl.Enable(gl.CULL_FACE)
-	} else {
-		gl.Disable(gl.CULL_FACE)
-	}
-	if lastEnableDepthTest {
-		gl.Enable(gl.DEPTH_TEST)
-	} else {
-		gl.Disable(gl.DEPTH_TEST)
-	}
-	if lastEnableScissorTest {
-		gl.Enable(gl.SCISSOR_TEST)
-	} else {
-		gl.Disable(gl.SCISSOR_TEST)
-	}
-	gl.PolygonMode(gl.FRONT_AND_BACK, uint32(lastPolygonMode[0]))
-	gl.Viewport(lastViewport[0], lastViewport[1], lastViewport[2], lastViewport[3])
-	gl.Scissor(lastScissorBox[0], lastScissorBox[1], lastScissorBox[2], lastScissorBox[3])
+	gl.BindVertexArray(vao)
+	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(vertices)/3))
 
+}
+
+func compileShader(source string, shaderType uint32) (uint32, error) {
+	shader := gl.CreateShader(shaderType)
+
+	csources, free := gl.Strs(source)
+	gl.ShaderSource(shader, 1, csources, nil)
+	free()
+	gl.CompileShader(shader)
+
+	var status int32
+	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+	if status == gl.FALSE {
+		var logLength int32
+		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
+
+		log := strings.Repeat("\x00", int(logLength+1))
+		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
+
+		return 0, fmt.Errorf("failed to compile %v: %v", source, log)
+	}
+
+	return shader, nil
 }

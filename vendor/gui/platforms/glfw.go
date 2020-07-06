@@ -56,6 +56,7 @@ func NewGLFW(io imgui.IO, clientAPI GLFWClientAPI) (*GLFW, error) {
 		glfw.Terminate()
 		return nil, fmt.Errorf("failed to create window: %v", err)
 	}
+
 	window.MakeContextCurrent()
 	glfw.SwapInterval(1)
 
@@ -63,6 +64,7 @@ func NewGLFW(io imgui.IO, clientAPI GLFWClientAPI) (*GLFW, error) {
 		imguiIO: io,
 		window:  window,
 	}
+
 	platform.setKeyMapping()
 	platform.installCallbacks()
 

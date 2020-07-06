@@ -44,7 +44,7 @@ var httpClient = &http.Client{
 /*Scraper Holds all relevant variables for scraping Promthetheus.*/
 type Scraper struct {
 	Target     string
-	output     chan<- float64
+	Output     chan float64
 	Control    chan ControlMessage
 	mode       OutputType
 	data       *queue.RingBuffer
@@ -112,11 +112,11 @@ func (tp *point) UnmarshalJSON(data []byte) error {
 }
 
 /*NewScraper Initializes a new instance of the scraper struct and starts the control thread. */
-func NewScraper(logIn *logging.Logger, server string, mode OutputType, controlChannel chan ControlMessage, outputChannel chan<- float64) *Scraper {
+func NewScraper(logIn *logging.Logger, server string, mode OutputType) *Scraper {
 
 	log = logIn
 	queryEndpoint := "http://" + server + "/api/v1/query_range"
-	scraper := Scraper{queryEndpoint, outputChannel, controlChannel, mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate, true}
+	scraper := Scraper{queryEndpoint, make(chan float64, 600), make(chan ControlMessage, 6), mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate, true}
 
 	go scraper.prometheusControlThread()
 
@@ -186,7 +186,7 @@ func (collector *Scraper) outputThread() {
 				log.Printf("Error: %s", err)
 			}
 
-			collector.output <- item.(float64)
+			collector.Output <- item.(float64)
 			time.Sleep(time.Duration(collector.outputRate) * time.Millisecond)
 
 		} else {

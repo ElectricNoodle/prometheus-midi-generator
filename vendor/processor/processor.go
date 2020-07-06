@@ -113,8 +113,8 @@ const maxPreviousValues = 20
 /*ProcInfo Holds input/output info and generation parameters.*/
 type ProcInfo struct {
 	Control             chan ControlMessage
-	input               <-chan float64
-	output              chan<- midioutput.MIDIMessage
+	input               chan float64
+	Output              chan midioutput.MIDIMessage
 	BPM                 float64
 	TickInc             time.Duration
 	tick                float64
@@ -128,10 +128,10 @@ type ProcInfo struct {
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
-func NewProcessor(logIn *logging.Logger, processorConfig Config, controlChannel chan ControlMessage, inputChannel <-chan float64, outputChannel chan<- midioutput.MIDIMessage) *ProcInfo {
+func NewProcessor(logIn *logging.Logger, processorConfig Config, inputChannel chan float64) *ProcInfo {
 
 	log = logIn
-	processor := ProcInfo{controlChannel, inputChannel, outputChannel, defaultBPM,
+	processor := ProcInfo{make(chan ControlMessage, 6), inputChannel, make(chan midioutput.MIDIMessage, 6), defaultBPM,
 		defaultTick, 0, orderedmap.NewOrderedMap(), scaleMap{},
 		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
 
@@ -416,7 +416,7 @@ func (processor *ProcInfo) handleEvents() {
 					log.Printf("Send stop %d Oct: %d \n", processor.rootNoteOffset+e.value, e.octave)
 
 					processor.events[i].state = stop
-					processor.output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOff, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 50}
+					processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOff, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: 50}
 
 				}
 			}
@@ -430,8 +430,8 @@ func (processor *ProcInfo) handleEvents() {
 				log.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
 
 				processor.events[i].state = active
-				processor.output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
-
+				processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
+				break
 			} else if e.state == stop {
 				processor.events[i] = event{}
 			}
@@ -451,7 +451,6 @@ func (processor *ProcInfo) insertEvent(eventIn event) {
 
 func (processor *ProcInfo) incrementTick() {
 
-	//log.Printf("Tick: %f \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
 	time.Sleep(processor.TickInc * time.Millisecond)

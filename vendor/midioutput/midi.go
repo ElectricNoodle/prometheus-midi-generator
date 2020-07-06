@@ -68,8 +68,8 @@ const (
 	SetDevice MessageType = 0
 )
 
-/*MIDIControlMessage Used to store information on control messages recieved. */
-type MIDIControlMessage struct {
+/*ControlMessage Used to store information on control messages recieved. */
+type ControlMessage struct {
 	Type  MessageType
 	Value int
 }
@@ -81,7 +81,7 @@ type midiDevice struct {
 
 /*MIDIEmitter Holds relevant info needed to recieve input/emit midi messages. */
 type MIDIEmitter struct {
-	Control        chan MIDIControlMessage
+	Control        chan ControlMessage
 	input          <-chan MIDIMessage
 	MIDIDevices    []midiDevice
 	configuredPort int
@@ -92,10 +92,10 @@ type MIDIEmitter struct {
 var maxDevices = 10
 
 /*NewMidi Returns a new instance of midi struct, and inits midi connection. */
-func NewMidi(logIn *logging.Logger, controlChannel chan MIDIControlMessage, inputChannel <-chan MIDIMessage) *MIDIEmitter {
+func NewMidi(logIn *logging.Logger, inputChannel <-chan MIDIMessage) *MIDIEmitter {
 
 	log = logIn
-	midiEmitter := MIDIEmitter{controlChannel, inputChannel, []midiDevice{}, 0, 0, nil}
+	midiEmitter := MIDIEmitter{make(chan ControlMessage, 6), inputChannel, []midiDevice{}, 0, 0, nil}
 
 	midiEmitter.initMIDI()
 
@@ -195,9 +195,12 @@ func (midiEmitter *MIDIEmitter) setDevice(id int) {
 func (midiEmitter *MIDIEmitter) emitThread() {
 	for {
 		message := <-midiEmitter.input
-		//fmt.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+		//log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+
 		if midiEmitter.midiOutput != nil {
+
 			midiEmitter.midiOutput.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
+
 		} else {
 			log.Println("No MIDI Device configured.")
 		}
