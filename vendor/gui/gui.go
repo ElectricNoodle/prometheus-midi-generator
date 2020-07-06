@@ -1,12 +1,11 @@
 package gui
 
 import (
-	"fmt"
+	"fractals"
 	"logging"
 	"midioutput"
 	"processor"
 	"prometheus"
-	"strings"
 	"time"
 
 	"github.com/go-gl/gl/v3.2-core/gl"
@@ -14,24 +13,6 @@ import (
 )
 
 var log *logging.Logger
-
-const (
-	vertexShaderSource = `
-    #version 410
-    in vec3 vp;
-    void main() {
-        gl_Position = vec4(vp, 1.0);
-    }
-` + "\x00"
-
-	fragmentShaderSource = `
-    #version 410
-    out vec4 frag_colour;
-    void main() {
-        frag_colour = vec4(1, 1, 1, 1);
-    }
-` + "\x00"
-)
 
 // Platform covers mouse/keyboard/gamepad inputs, cursor shape, timing, windowing.
 type Platform interface {
@@ -100,41 +81,18 @@ var processorGenerationTypePos int32
 var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
-type FractalRenderer struct {
-	glslVersion            string
-	fontTexture            uint32
-	shaderHandle           uint32
-	FractalShader          uint32
-	vertHandle             uint32
-	fragHandle             uint32
-	attribLocationTex      int32
-	attribLocationProjMtx  int32
-	attribLocationPosition int32
-	attribLocationUV       int32
-	attribLocationColor    int32
-	vboHandle              uint32
-	elementsHandle         uint32
-}
-
-var fractalRenderer FractalRenderer
+var fractalRenderer *fractals.FractalRenderer
 
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, log *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
+func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
 
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
-	fractalRenderer = FractalRenderer{glslVersion: "#version 150"}
+	log = logIn
 
-	/*	vertexShader, err := compileShader(vertexShaderSource, gl.VERTEX_SHADER)
-		if err != nil {
-			panic(err)
-		}
-		fragmentShader, err := compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
-		if err != nil {
-			panic(err)
-		}
-	*/
 	go loggingThread(log)
+
+	fractalRenderer = fractals.NewFractalRenderer()
 
 	showDemoWindow := false
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
@@ -204,9 +162,8 @@ func Run(p Platform, r Renderer, log *logging.Logger, scraper *prometheus.Scrape
 		imgui.Render() // This call only creates the draw data list. Actual rendering to framebuffer is done below.
 
 		r.PreRender(clearColor)
-		// A this point, the application could perform its own rendering...
-		// app.RenderScene()
-		//renderFractal(p.DisplaySize(), p.FramebufferSize())
+
+		fractalRenderer.Render(p.DisplaySize(), p.FramebufferSize())
 
 		r.Render(p.DisplaySize(), p.FramebufferSize(), imgui.RenderedDrawData())
 		p.PostRender()
@@ -215,6 +172,7 @@ func Run(p Platform, r Renderer, log *logging.Logger, scraper *prometheus.Scrape
 		<-time.After(time.Millisecond * 25)
 	}
 }
+
 func loggingThread(log *logging.Logger) {
 	for {
 
@@ -362,9 +320,6 @@ func renderStartStopButtons(scraper *prometheus.Scraper) {
 	}
 }
 
-func renderTest(displaySize [2]float32, framebufferSize [2]float32) {
-	log.Printf("")
-}
 func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 
 	fbWidth, fbHeight := framebufferSize[0], framebufferSize[1]
@@ -400,27 +355,4 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 	gl.BindVertexArray(vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(vertices)/3))
 
-}
-
-func compileShader(source string, shaderType uint32) (uint32, error) {
-	shader := gl.CreateShader(shaderType)
-
-	csources, free := gl.Strs(source)
-	gl.ShaderSource(shader, 1, csources, nil)
-	free()
-	gl.CompileShader(shader)
-
-	var status int32
-	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
-	if status == gl.FALSE {
-		var logLength int32
-		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
-
-		log := strings.Repeat("\x00", int(logLength+1))
-		gl.GetShaderInfoLog(shader, logLength, nil, gl.Str(log))
-
-		return 0, fmt.Errorf("failed to compile %v: %v", source, log)
-	}
-
-	return shader, nil
 }
