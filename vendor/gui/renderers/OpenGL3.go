@@ -125,6 +125,7 @@ func (renderer *OpenGL3) Render(displaySize [2]float32, framebufferSize [2]float
 		{0.0, 0.0, -1.0, 0.0},
 		{-1.0, 1.0, 0.0, 1.0},
 	}
+
 	gl.UseProgram(renderer.shaderHandle)
 	gl.Uniform1i(renderer.attribLocationTex, 0)
 	gl.UniformMatrix4fv(renderer.attribLocationProjMtx, 1, false, &orthoProjection[0][0])

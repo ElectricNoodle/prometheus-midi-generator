@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/go-gl/mathgl/mgl32"
 )
 
 var (
@@ -22,13 +23,17 @@ var (
 
 	vertexShaderSource = `
 	#version 410
-	attribute vec4 vPosition;
-	layout (location = 0) in vec2 position;
+	layout(location = 0) in vec3 vertexPosition_modelspace;
+  
+	// Values that stay constant for the whole mesh.
+	uniform mat4 u_mvp;
 	out vec2 coord;
 
 	void main() {
-		gl_Position = vec4(position, 0.0f, 0.8f);
-		coord = position.xy;
+
+		gl_Position =  u_mvp * vec4(vertexPosition_modelspace,1);
+		coord = vertexPosition_modelspace.xy;
+
 	}
 ` + "\x00"
 
@@ -36,7 +41,7 @@ var (
 	#version 410
 
 	uniform float u_time;
-	float maxIterations = 100;
+	float maxIterations = 200;
 	in vec2 coord;
 
 	out vec4 frag_colour;
@@ -59,7 +64,7 @@ var (
 
 	void main() {
 
-		frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3),iterateMandelbrot(coord),iterateMandelbrot(coord),1.0);
+		frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3),iterateMandelbrot(coord),iterateMandelbrot(coord)/2,1.0);
 
 	}
 	` + "\x00"
@@ -152,14 +157,40 @@ func (renderer *FractalRenderer) compileShader(source string, shaderType uint32)
 func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize [2]float32) {
 
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+	displayWidth, displayHeight := displaySize[0], displaySize[1]
+	fbWidth, fbHeight := framebufferSize[0], framebufferSize[1]
+	if (fbWidth <= 0) || (fbHeight <= 0) {
+		return
+	}
+
+	gl.Viewport(0, 0, int32(fbWidth), int32(fbHeight))
+
+	projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(displayWidth)/displayHeight, 0.1, 10.0)
+
+	//	glm::vec3(4,3,3), // Camera is at (4,3,3), in World Space
+	//	glm::vec3(0,0,0), // and looks at the origin
+	//	glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+	view := mgl32.LookAt(
+		4, 3, 3,
+		0, 0, 0,
+		0, 1, 0)
+
 	gl.UseProgram(renderer.program)
 
 	time := glfw.GetTime()
 
+	model := mgl32.Ident4()
+	scale := mgl32.Scale3D(2.0, 2.0, 2.0)
+	rotation := mgl32.HomogRotate3DY(float32(time / 2))
+
 	timeLocation := gl.GetUniformLocation(renderer.program, gl.Str("u_time"+"\x00"))
+	modelViewProjection := projection.Mul4(view).Mul4(model).Mul4(scale).Mul4(rotation)
+	shaderMvp := gl.GetUniformLocation(renderer.program, gl.Str("u_mvp"+"\x00"))
 
 	gl.UseProgram(renderer.program)
 	gl.Uniform1f(timeLocation, float32(time))
+	gl.UniformMatrix4fv(shaderMvp, 1, false, &modelViewProjection[0])
 
 	gl.BindVertexArray(renderer.vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
