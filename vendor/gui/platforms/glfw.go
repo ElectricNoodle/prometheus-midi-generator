@@ -51,7 +51,7 @@ func NewGLFW(io imgui.IO, clientAPI GLFWClientAPI) (*GLFW, error) {
 		return nil, fmt.Errorf("unsupported ClientAPI: <%s>", clientAPI)
 	}
 
-	window, err := glfw.CreateWindow(1280, 720, "ImGui-Go GLFW+"+string(clientAPI)+" example", nil, nil)
+	window, err := glfw.CreateWindow(1280, 720, "", nil, nil)
 	if err != nil {
 		glfw.Terminate()
 		return nil, fmt.Errorf("failed to create window: %v", err)

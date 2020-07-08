@@ -24,7 +24,7 @@ var (
 	vertexShaderSource = `
 	#version 410
 	layout(location = 0) in vec3 vertexPosition_modelspace;
-  
+	uniform float u_time;
 	// Values that stay constant for the whole mesh.
 	uniform mat4 u_mvp;
 	out vec2 coord;
@@ -40,8 +40,10 @@ var (
 	fragmentShaderSource = `
 	#version 410
 
+	precision highp float;
+
 	uniform float u_time;
-	float maxIterations = 200;
+	float maxIterations = 100;
 	in vec2 coord;
 
 	out vec4 frag_colour;
@@ -62,10 +64,37 @@ var (
 		return maxIterations;
 	}
 
+	float mandelbrot( in vec2 c )
+	{
+	
+		const float B = 256.0;
+		float l = 0.0;
+		vec2 z  = vec2(0.0);
+		for( int i=0; i<maxIterations; i++ )
+		{
+			z = vec2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
+			if( dot(z,z)>(B*B) ) break;
+			l += 1.0;
+		}
+	
+		if( l>maxIterations ) return 0.0;
+
+		// equivalent optimized smooth interation count
+		float sl = l - log2(log2(dot(z,z))) + 4.0;
+	
+		float al = smoothstep( -0.1, 0.0, cos(0.5*6.2831*(u_time/5) ) );
+		l = mix( l, sl, al );
+	
+		return l;
+	}
 	void main() {
+		vec3 col;
+		//frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3), iterateMandelbrot(coord), iterateMandelbrot(coord)/2, 1.0);
 
-		frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3),iterateMandelbrot(coord),iterateMandelbrot(coord)/2,1.0);
-
+		float l = mandelbrot(coord);
+		col += 0.5 + 0.5*cos( 3.0 + l*0.15 + vec3(0.0,0.6,1.0));
+		
+		frag_colour = vec4( col, 1.0 );
 	}
 	` + "\x00"
 )
@@ -160,9 +189,12 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 
 	displayWidth, displayHeight := displaySize[0], displaySize[1]
 	fbWidth, fbHeight := framebufferSize[0], framebufferSize[1]
+
 	if (fbWidth <= 0) || (fbHeight <= 0) {
 		return
 	}
+
+	time := glfw.GetTime()
 
 	gl.Viewport(0, 0, int32(fbWidth), int32(fbHeight))
 
@@ -171,21 +203,28 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	//	glm::vec3(4,3,3), // Camera is at (4,3,3), in World Space
 	//	glm::vec3(0,0,0), // and looks at the origin
 	//	glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
+
+	//radius := 5.0
+	cameraX := (float32)(0) //(float32)(math.Sin(time) * 0.5)
+	cameraY := (float32)(0) //(float32)(math.Cos(time) * radius)
+	cameraZ := (float32)(4.0)
+
 	view := mgl32.LookAt(
-		4, 3, 3,
+		cameraX, cameraY, cameraZ,
 		0, 0, 0,
 		0, 1, 0)
 
 	gl.UseProgram(renderer.program)
 
-	time := glfw.GetTime()
-
 	model := mgl32.Ident4()
-	scale := mgl32.Scale3D(2.0, 2.0, 2.0)
-	rotation := mgl32.HomogRotate3DY(float32(time / 2))
+	scale := mgl32.Scale3D(3.0, 2.0, 2.0)
+
+	//rotationX := mgl32.HomogRotate3DX(float32(time))
+	//rotationY := mgl32.HomogRotate3DY(float32(time / 2))
+	//rotationZ := mgl32.HomogRotate3DZ(float32(time / 4))
 
 	timeLocation := gl.GetUniformLocation(renderer.program, gl.Str("u_time"+"\x00"))
-	modelViewProjection := projection.Mul4(view).Mul4(model).Mul4(scale).Mul4(rotation)
+	modelViewProjection := projection.Mul4(view).Mul4(model).Mul4(scale) //.Mul4(rotationY).Mul4(rotationX).Mul4(rotationZ)
 	shaderMvp := gl.GetUniformLocation(renderer.program, gl.Str("u_mvp"+"\x00"))
 
 	gl.UseProgram(renderer.program)
