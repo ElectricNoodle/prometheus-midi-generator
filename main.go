@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"fractals"
 	"gui"
 	"gui/platforms"
 	"gui/renderers"
@@ -27,6 +28,7 @@ var log *logging.Logger
 var scraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
 var midiEmitter *midioutput.MIDIEmitter
+var fractalRenderer *fractals.FractalRenderer
 
 func main() {
 
@@ -78,6 +80,7 @@ func initializeBackend() {
 	scraper = prometheus.NewScraper(log, configuration.PrometheusServer, prometheus.Playback)
 	metricProcessor = processor.NewProcessor(log, configuration.ProcessorConfig, scraper.Output)
 	midiEmitter = midioutput.NewMidi(log, metricProcessor.Output)
+	fractalRenderer = fractals.NewFractalRenderer()
 
 }
 
@@ -105,5 +108,5 @@ func initializeGUI() {
 
 	defer renderer.Dispose()
 
-	gui.Run(platform, renderer, log, scraper, metricProcessor, midiEmitter)
+	gui.Run(platform, renderer, log, scraper, metricProcessor, midiEmitter, fractalRenderer)
 }

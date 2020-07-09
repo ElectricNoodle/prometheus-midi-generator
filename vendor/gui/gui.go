@@ -81,24 +81,17 @@ var processorGenerationTypePos int32
 var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
-var fractalRenderer *fractals.FractalRenderer
-
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter) {
+func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter, fractalRenderer *fractals.FractalRenderer) {
 
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
 	log = logIn
-
 	go loggingThread(log)
 
-	fractalRenderer = fractals.NewFractalRenderer()
-
-	showDemoWindow := false
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
-	//f := float32(0.0)
-	//counter := 0
-	showAnotherWindow := false
+
+	fractalRenderer.Init()
 
 	for !p.ShouldStop() {
 		p.ProcessEvents()
@@ -106,12 +99,6 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 		// Signal start of a new frame
 		p.NewFrame()
 		imgui.NewFrame()
-
-		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()!
-		// You can browse its code to learn more about Dear ImGui!).
-		if showDemoWindow {
-			imgui.ShowDemoWindow(&showDemoWindow)
-		}
 
 		if consoleEnabled {
 			renderConsoleWindow()
@@ -143,18 +130,6 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 
 			renderStartStopButtons(scraper)
 
-			imgui.End()
-		}
-
-		// 3. Show another simple window.
-		if showAnotherWindow {
-			// Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			imgui.BeginV("Another window", &showAnotherWindow, 0)
-
-			imgui.Text("Hello from another window!")
-			if imgui.Button("Close Me") {
-				showAnotherWindow = false
-			}
 			imgui.End()
 		}
 

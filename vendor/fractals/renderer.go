@@ -102,18 +102,26 @@ var (
 
 /*FractalRenderer Defines a Fractal Renderer*/
 type FractalRenderer struct {
-	program uint32
-	vao     uint32
+	program     uint32
+	vao         uint32
+	initialized bool
 }
 
 /*NewFractalRenderer Returns a new instance of FractalRenderer */
 func NewFractalRenderer() *FractalRenderer {
 
-	renderer := FractalRenderer{0, 0}
+	renderer := FractalRenderer{0, 0, false}
+
+	return &renderer
+}
+
+/*Init FractCalled to setup the OpenGL stuff when we're about to go into the loop in the GUI.*/
+func (renderer *FractalRenderer) Init() {
+
 	renderer.initOpenGL()
 	renderer.makeVao(square)
 
-	return &renderer
+	renderer.initialized = true
 }
 
 // initOpenGL initializes OpenGL and returns an intiialized program.
