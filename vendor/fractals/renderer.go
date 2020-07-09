@@ -2,13 +2,15 @@ package fractals
 
 import (
 	"fmt"
-	"log"
+	"logging"
 	"strings"
 
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
 )
+
+var log *logging.Logger
 
 var (
 	square = []float32{
@@ -102,15 +104,18 @@ var (
 
 /*FractalRenderer Defines a Fractal Renderer*/
 type FractalRenderer struct {
-	program     uint32
-	vao         uint32
-	initialized bool
+	initialized    bool
+	program        uint32
+	vao            uint32
+	vertexShader   uint32
+	fragmentShader uint32
 }
 
 /*NewFractalRenderer Returns a new instance of FractalRenderer */
-func NewFractalRenderer() *FractalRenderer {
+func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
-	renderer := FractalRenderer{0, 0, false}
+	log = logIn
+	renderer := FractalRenderer{false, 0, 0, 0, 0}
 
 	return &renderer
 }
@@ -118,10 +123,18 @@ func NewFractalRenderer() *FractalRenderer {
 /*Init FractCalled to setup the OpenGL stuff when we're about to go into the loop in the GUI.*/
 func (renderer *FractalRenderer) Init() {
 
+	renderer.vertexShader = renderer.loadShader("shaders/mandelbrot.vert")
+	renderer.fragmentShader = renderer.loadShader("shaders/mandelbrot.frag")
+
 	renderer.initOpenGL()
 	renderer.makeVao(square)
 
 	renderer.initialized = true
+}
+
+/*loadShader Loads in a shader from a file.*/
+func (renderer *FractalRenderer) loadShader(path string) uint32 {
+	return 0
 }
 
 // initOpenGL initializes OpenGL and returns an intiialized program.
@@ -244,4 +257,9 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
 
 	glfw.PollEvents()
+}
+
+/*KeyCallback Passed to platform so we get key events. */
+func (renderer *FractalRenderer) KeyCallback(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+	log.Println("Debug:", key)
 }

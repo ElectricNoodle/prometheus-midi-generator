@@ -80,7 +80,7 @@ func initializeBackend() {
 	scraper = prometheus.NewScraper(log, configuration.PrometheusServer, prometheus.Playback)
 	metricProcessor = processor.NewProcessor(log, configuration.ProcessorConfig, scraper.Output)
 	midiEmitter = midioutput.NewMidi(log, metricProcessor.Output)
-	fractalRenderer = fractals.NewFractalRenderer()
+	fractalRenderer = fractals.NewFractalRenderer(log)
 
 }
 
@@ -91,6 +91,8 @@ func initializeGUI() {
 	io := imgui.CurrentIO()
 
 	platform, err := platforms.NewGLFW(io, platforms.GLFWClientAPIOpenGL3)
+
+	platform.AddKeyboardCallback(fractalRenderer.KeyCallback)
 
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)

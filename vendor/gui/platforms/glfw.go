@@ -18,6 +18,9 @@ const (
 	GLFWClientAPIOpenGL3 GLFWClientAPI = "OpenGL3"
 )
 
+/* Added so that I can get key presses in custom renderer. */
+type keyCallback func(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey)
+
 // GLFW implements a platform based on github.com/go-gl/glfw (v3.2).
 type GLFW struct {
 	imguiIO imgui.IO
@@ -26,6 +29,7 @@ type GLFW struct {
 
 	time             float64
 	mouseJustPressed [3]bool
+	keyCallback      keyCallback
 }
 
 // NewGLFW attempts to initialize a GLFW context.
@@ -61,14 +65,25 @@ func NewGLFW(io imgui.IO, clientAPI GLFWClientAPI) (*GLFW, error) {
 	glfw.SwapInterval(1)
 
 	platform := &GLFW{
-		imguiIO: io,
-		window:  window,
+		imguiIO:     io,
+		window:      window,
+		keyCallback: nil,
 	}
 
 	platform.setKeyMapping()
 	platform.installCallbacks()
 
 	return platform, nil
+}
+
+/*AddKeyboardCallback Registers a new callback for key events.*/
+func (platform *GLFW) AddKeyboardCallback(callback keyCallback) {
+	platform.keyCallback = callback
+}
+
+/*AddMouseCallback Registers a new callback for mouse events. */
+func (platform *GLFW) AddMouseCallback() {
+
 }
 
 // Dispose cleans up the resources.
@@ -114,10 +129,14 @@ func (platform *GLFW) NewFrame() {
 
 	// Setup inputs
 	if platform.window.GetAttrib(glfw.Focused) != 0 {
+
 		x, y := platform.window.GetCursorPos()
 		platform.imguiIO.SetMousePosition(imgui.Vec2{X: float32(x), Y: float32(y)})
+
 	} else {
+
 		platform.imguiIO.SetMousePosition(imgui.Vec2{X: -math.MaxFloat32, Y: -math.MaxFloat32})
+
 	}
 
 	for i := 0; i < len(platform.mouseJustPressed); i++ {
@@ -201,6 +220,8 @@ func (platform *GLFW) keyChange(window *glfw.Window, key glfw.Key, scancode int,
 	platform.imguiIO.KeyShift(int(glfw.KeyLeftShift), int(glfw.KeyRightShift))
 	platform.imguiIO.KeyAlt(int(glfw.KeyLeftAlt), int(glfw.KeyRightAlt))
 	platform.imguiIO.KeySuper(int(glfw.KeyLeftSuper), int(glfw.KeyRightSuper))
+
+	platform.keyCallback(key, scancode, action, mods)
 }
 
 func (platform *GLFW) charChange(window *glfw.Window, char rune) {
