@@ -43,7 +43,7 @@ var (
 	precision highp float;
 
 	uniform float u_time;
-	float maxIterations = 100;
+	float maxIterations = 20;
 	in vec2 coord;
 
 	out vec4 frag_colour;
@@ -82,19 +82,20 @@ var (
 		// equivalent optimized smooth interation count
 		float sl = l - log2(log2(dot(z,z))) + 4.0;
 	
-		float al = smoothstep( -0.1, 0.0, cos(0.5*6.2831*(u_time/5) ) );
+		float al = smoothstep( -0.1, 0.0, cos(0.5*6.2831*(52/100) ) );
 		l = mix( l, sl, al );
 	
 		return l;
 	}
 	void main() {
-		vec3 col;
-		//frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3), iterateMandelbrot(coord), iterateMandelbrot(coord)/2, 1.0);
-
-		float l = mandelbrot(coord);
-		col += 0.5 + 0.5*cos( 3.0 + l*0.15 + vec3(0.0,0.6,1.0));
 		
-		frag_colour = vec4( col, 1.0 );
+		frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3), iterateMandelbrot(coord), iterateMandelbrot(coord)/2, 1.0);
+
+
+		//vec3 col;
+		//float l = mandelbrot(coord);
+		//col += 0.5 + 0.5*cos( 3.0 + l*0.15 + vec3(0.0,0.6,1.0));
+		//frag_colour = vec4( col, 1.0 );
 	}
 	` + "\x00"
 )
@@ -195,7 +196,7 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	}
 
 	time := glfw.GetTime()
-
+	//	log.Println(time)
 	gl.Viewport(0, 0, int32(fbWidth), int32(fbHeight))
 
 	projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(displayWidth)/displayHeight, 0.1, 10.0)
@@ -205,19 +206,19 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	//	glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
 
 	//radius := 5.0
-	cameraX := (float32)(0) //(float32)(math.Sin(time) * 0.5)
-	cameraY := (float32)(0) //(float32)(math.Cos(time) * radius)
-	cameraZ := (float32)(4.0)
+	cameraX := (float32)(1.5) //(float32)(math.Sin(time) * 0.5)
+	cameraY := (float32)(0)   //(float32)(math.Cos(time) * radius)
+	cameraZ := (float32)(5.0)
 
 	view := mgl32.LookAt(
 		cameraX, cameraY, cameraZ,
-		0, 0, 0,
+		1.5, 0, 0,
 		0, 1, 0)
 
 	gl.UseProgram(renderer.program)
 
 	model := mgl32.Ident4()
-	scale := mgl32.Scale3D(3.0, 2.0, 2.0)
+	scale := mgl32.Scale3D(2.0, 2.0, 2.0)
 
 	//rotationX := mgl32.HomogRotate3DX(float32(time))
 	//rotationY := mgl32.HomogRotate3DY(float32(time / 2))
