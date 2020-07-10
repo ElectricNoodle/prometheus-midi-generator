@@ -2,6 +2,7 @@ package fractals
 
 import (
 	"fmt"
+	"io/ioutil"
 	"logging"
 	"strings"
 
@@ -13,93 +14,15 @@ import (
 var log *logging.Logger
 
 var (
-	square = []float32{
-		-1.0, 1.0, 0,
-		-1.0, -1.0, 0,
-		1.0, -1.0, 0,
+	renderSurface = []float32{
+		-0.95, 0.75, 0,
+		-0.95, -0.75, 0,
+		0.95, -0.75, 0,
 
-		-1.0, 1.0, 0,
-		1.0, 1.0, 0,
-		1.0, -1.0, 0,
+		-0.95, 0.75, 0,
+		0.95, 0.75, 0,
+		0.95, -0.75, 0,
 	}
-
-	vertexShaderSource = `
-	#version 410
-	layout(location = 0) in vec3 vertexPosition_modelspace;
-	uniform float u_time;
-	// Values that stay constant for the whole mesh.
-	uniform mat4 u_mvp;
-	out vec2 coord;
-
-	void main() {
-
-		gl_Position =  u_mvp * vec4(vertexPosition_modelspace,1);
-		coord = vertexPosition_modelspace.xy;
-
-	}
-` + "\x00"
-
-	fragmentShaderSource = `
-	#version 410
-
-	precision highp float;
-
-	uniform float u_time;
-	float maxIterations = 20;
-	in vec2 coord;
-
-	out vec4 frag_colour;
-
-	vec2 squareImaginary(vec2 number){
-		return vec2(
-			pow(number.x,2)-pow(number.y,2),
-			2*number.x*number.y
-		);
-	}
-	
-	float iterateMandelbrot(vec2 coord){
-		vec2 z = vec2(0,0);
-		for(int i=0;i<maxIterations;i++){
-			z = squareImaginary(z) + coord;
-			if(length(z.x)>2) return i/maxIterations;
-		}
-		return maxIterations;
-	}
-
-	float mandelbrot( in vec2 c )
-	{
-	
-		const float B = 256.0;
-		float l = 0.0;
-		vec2 z  = vec2(0.0);
-		for( int i=0; i<maxIterations; i++ )
-		{
-			z = vec2( z.x*z.x - z.y*z.y, 2.0*z.x*z.y ) + c;
-			if( dot(z,z)>(B*B) ) break;
-			l += 1.0;
-		}
-	
-		if( l>maxIterations ) return 0.0;
-
-		// equivalent optimized smooth interation count
-		float sl = l - log2(log2(dot(z,z))) + 4.0;
-	
-		float al = smoothstep( -0.1, 0.0, cos(0.5*6.2831*(52/100) ) );
-		l = mix( l, sl, al );
-	
-		return l;
-	}
-	void main() {
-		
-		frag_colour = vec4(clamp(iterateMandelbrot(coord)/(abs(tan(u_time))),0,0.3), iterateMandelbrot(coord), iterateMandelbrot(coord)/2, 1.0);
-
-
-		//vec3 col;
-		//float l = mandelbrot(coord);
-		//col += 0.5 + 0.5*cos( 3.0 + l*0.15 + vec3(0.0,0.6,1.0));
-		//frag_colour = vec4( col, 1.0 );
-	}
-	` + "\x00"
 )
 
 /*FractalRenderer Defines a Fractal Renderer*/
@@ -123,18 +46,23 @@ func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 /*Init FractCalled to setup the OpenGL stuff when we're about to go into the loop in the GUI.*/
 func (renderer *FractalRenderer) Init() {
 
-	renderer.vertexShader = renderer.loadShader("shaders/mandelbrot.vert")
-	renderer.fragmentShader = renderer.loadShader("shaders/mandelbrot.frag")
-
 	renderer.initOpenGL()
-	renderer.makeVao(square)
+	renderer.makeVao(renderSurface)
 
 	renderer.initialized = true
 }
 
 /*loadShader Loads in a shader from a file.*/
-func (renderer *FractalRenderer) loadShader(path string) uint32 {
-	return 0
+func (renderer *FractalRenderer) loadShader(path string) string {
+
+	shaderBytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	shaderString := string(shaderBytes)
+
+	return shaderString
 }
 
 // initOpenGL initializes OpenGL and returns an intiialized program.
@@ -143,19 +71,27 @@ func (renderer *FractalRenderer) initOpenGL() {
 	version := gl.GoStr(gl.GetString(gl.VERSION))
 	log.Printf("OpenGL version %s\n", version)
 
+	vertexShaderSource := renderer.loadShader("vendor/fractals/shaders/mandelbrot.vert") + "\x00"
 	vertexShader, err := renderer.compileShader(vertexShaderSource, gl.VERTEX_SHADER)
+
 	if err != nil {
 		panic(err)
 	}
+
+	fragmentShaderSource := renderer.loadShader("vendor/fractals/shaders/mandelbrot.frag") + "\x00"
 	fragmentShader, err := renderer.compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
+
 	if err != nil {
 		panic(err)
 	}
+
+	renderer.vertexShader = vertexShader
+	renderer.fragmentShader = fragmentShader
 
 	prog := gl.CreateProgram()
 
-	gl.AttachShader(prog, vertexShader)
-	gl.AttachShader(prog, fragmentShader)
+	gl.AttachShader(prog, renderer.vertexShader)
+	gl.AttachShader(prog, renderer.fragmentShader)
 
 	gl.LinkProgram(prog)
 	renderer.program = prog
@@ -191,6 +127,7 @@ func (renderer *FractalRenderer) compileShader(source string, shaderType uint32)
 
 	var status int32
 	gl.GetShaderiv(shader, gl.COMPILE_STATUS, &status)
+
 	if status == gl.FALSE {
 		var logLength int32
 		gl.GetShaderiv(shader, gl.INFO_LOG_LENGTH, &logLength)
@@ -227,13 +164,13 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	//	glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
 
 	//radius := 5.0
-	cameraX := (float32)(1.5) //(float32)(math.Sin(time) * 0.5)
-	cameraY := (float32)(0)   //(float32)(math.Cos(time) * radius)
-	cameraZ := (float32)(5.0)
+	cameraX := (float32)(0.95) //(float32)(math.Sin(time) * 0.5)
+	cameraY := (float32)(0)    //(float32)(math.Cos(time) * radius)
+	cameraZ := (float32)(3.7)
 
 	view := mgl32.LookAt(
 		cameraX, cameraY, cameraZ,
-		1.5, 0, 0,
+		0.95, 0, 0,
 		0, 1, 0)
 
 	gl.UseProgram(renderer.program)
@@ -254,7 +191,7 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	gl.UniformMatrix4fv(shaderMvp, 1, false, &modelViewProjection[0])
 
 	gl.BindVertexArray(renderer.vao)
-	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(square)/3))
+	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(renderSurface)/3))
 
 	glfw.PollEvents()
 }
