@@ -2,7 +2,7 @@
 
 precision highp float;
 
-uniform float u_time;
+uniform float uTime;
 float maxIterations = 20;
 in vec2 coord;
 
@@ -20,7 +20,7 @@ float iterateMandelbrot(vec2 coord){
     for(int i=0;i<maxIterations;i++){
 
         z = squareImaginary(z) + coord;
-        if(length(z.x)>maxIterations + (cos(u_time)*19) ) return i/maxIterations; // dd this to maxIterations for fun + (cos(u_time)*19.3)
+        if(length(z.x)>maxIterations + (cos(uTime)*17) ) return i/maxIterations; // dd this to maxIterations for fun + (cos(uTime)*19.3)
 
     }
     return maxIterations;
@@ -52,10 +52,13 @@ vec2 rotate(vec2 uv, vec2 pivot, float angle) {
 void main() {
 
     vec2 pivot = vec2( 0.0, 0.0);
-    vec2 movingCoord = vec2(coord.x+sin(u_time)/2 - 0.5,coord.y);
-    vec2 rotationCoord = rotate(movingCoord, pivot, u_time/4);
+    vec2 movingCoord = vec2(coord.x+sin(uTime)/2 - 0.5,coord.y);
+    vec2 rotationCoord = rotate(movingCoord, pivot, uTime/4);
 
-    frag_colour = vec4(clamp(iterateMandelbrot(rotationCoord)/(abs(tan(u_time))),0,0.25), iterateMandelbrot(rotationCoord), iterateMandelbrot(rotationCoord)/2, 1.0);
-    maxIterations = maxIterations +  (cos(u_time) * 5);
+    rotationCoord = rotationCoord * (5 + (sin(uTime) * 4 ));
+
+    frag_colour = vec4(clamp(iterateMandelbrot(rotationCoord)/(abs(tan(uTime))),0,0.25), iterateMandelbrot(rotationCoord), iterateMandelbrot(rotationCoord)/2, 1.0);
+    
+  //  maxIterations = maxIterations -  (cos(uTime) *4 );
 
 }

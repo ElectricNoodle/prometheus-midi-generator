@@ -178,9 +178,9 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	model := mgl32.Ident4()
 	scale := mgl32.Scale3D(2.0, 2.0, 2.0)
 
-	timeLocation := gl.GetUniformLocation(renderer.program, gl.Str("u_time"+"\x00"))
+	timeLocation := gl.GetUniformLocation(renderer.program, gl.Str("uTime"+"\x00"))
 	modelViewProjection := projection.Mul4(view).Mul4(model).Mul4(scale)
-	shaderMvp := gl.GetUniformLocation(renderer.program, gl.Str("u_mvp"+"\x00"))
+	shaderMvp := gl.GetUniformLocation(renderer.program, gl.Str("uMVP"+"\x00"))
 
 	gl.UseProgram(renderer.program)
 	gl.Uniform1f(timeLocation, float32(time))
