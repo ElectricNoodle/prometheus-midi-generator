@@ -2,15 +2,44 @@
 
 precision highp float;
 
-uniform float uTime;
-float maxIterations = 20;
-in vec2 coord;
+in vec2 iCoord;
 
-out vec4 frag_colour;
+
+uniform float uTime;
+
+// Used for moving/zooming fractal.
+uniform vec2 posOffset = vec2(-1.2,0);
+uniform float zoomOffset = 1.0;
+
+// Used to keep track of coloring modes per channel.
+uniform int rMode = 0;
+uniform int gMode = 2;
+uniform int bMode = 1;
+
+// Used for adding an offset to each color channel.
+uniform float rOffset = 0.0;
+uniform float gOffset = 0.6;
+uniform float bOffset = 0.1;
+
+// Overall max number of iterations
+uniform float maxIterations = 20;
+
+// What power to use in the Mandelbrot equation.
+int mandlePowerOne = 2;
+int mandlePowerTwo = 2;
+
+// Applied to the return value of the Mandelbrot equation. 
+uniform float mandleDivModifier = 1.0;
+uniform float mandleMultModifier = 1.0;
+
+// Applied to the conditional in the Mandelrot equation.
+uniform float mandleEscapeModifier = 0.0;
+
+out vec4 fragColor;
 
 vec2 squareImaginary(vec2 number){
     return vec2(
-        pow(number.x,2)-pow(number.y,2),
+        pow(number.x,mandlePowerOne)-pow(number.y,mandlePowerTwo),
         2*number.x*number.y
     );
 }
@@ -26,39 +55,43 @@ float iterateMandelbrot(vec2 coord){
     return maxIterations;
 }
 
-vec2 rotateUV(vec2 uv, vec2 pivot, float rotation) {
-    float sine = sin(rotation);
-    float cosine = cos(rotation);
-
-    uv -= pivot;
-    uv.x = uv.x * cosine - uv.y * sine;
-    uv.y = uv.x * sine + uv.y * cosine;
-    uv += pivot;
-
-    return uv;
-}
-
 vec2 rotate(vec2 uv, vec2 pivot, float angle) { 
 
     float s = sin(angle);
     float c = cos(angle);
-
     mat2 rotationMatrix = mat2( c, s,
                             -s,  c);
 
     return vec2(rotationMatrix * (uv - pivot) + pivot);
 }
 
+// Returns different transforms of input num for colouring.
+float getColor(float num, float offset, int mode) {
+    
+    switch(mode){
+        case 0:
+            return num;
+        case 1:
+            return num + offset;
+        case 2:
+            return (0.5 + 0.5*cos(2.7+num*30.0 + offset)) ;
+    }
+    return 0.0;   
+}
+
+// Handles move/rotate/zoom of current coordinates.
+// Calculates Mandelbrot value then uses it to set the colour depending on the mode.
 void main() {
 
-    vec2 pivot = vec2( 0.0, 0.0);
-    vec2 movingCoord = vec2(coord.x+sin(uTime)/2 - 0.5,coord.y);
-    vec2 rotationCoord = rotate(movingCoord, pivot, uTime/4);
+    vec2 pivot = vec2(0.0, 0.0);
+    vec2 coord = iCoord + posOffset;
+    coord = rotate(coord, pivot, 0);
+    coord = coord * zoomOffset;
 
-    rotationCoord = rotationCoord * (5 + (sin(uTime) * 4 ));
-
-    frag_colour = vec4(clamp(iterateMandelbrot(rotationCoord)/(abs(tan(uTime))),0,0.25), iterateMandelbrot(rotationCoord), iterateMandelbrot(rotationCoord)/2, 1.0);
+    float mandleBrotValue = (iterateMandelbrot(coord) * mandleMultModifier / mandleDivModifier);
     
-  //  maxIterations = maxIterations -  (cos(uTime) *4 );
-
+    fragColor = vec4( getColor(mandleBrotValue, rOffset, rMode),
+                        getColor(mandleBrotValue, gOffset, gMode), 
+                        getColor(mandleBrotValue, bOffset, bMode),
+                        1.0);
 }
