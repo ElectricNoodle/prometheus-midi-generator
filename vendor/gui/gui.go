@@ -81,6 +81,9 @@ var processorGenerationTypePos int32
 var processorGenerationType = "Chromatic"
 var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "ModulusChords(Ch1)", "ModulusPlusChords(Ch1)", "Binary Arp(Ch1)", "Modulus(Ch1) + BinaryArp(Ch2)", "ModulusPlus(Ch1) + BinaryArp(Ch2)"}
 
+//used for windows
+var open = true
+
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
 func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter, fractalRenderer *fractals.FractalRenderer) {
 
@@ -105,7 +108,8 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 		}
 
 		{
-			imgui.Begin("Prometheus Fractal/MIDI Generator")
+
+			imgui.BeginV("Prometheus Fractal/MIDI Generator", &open, imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoTitleBar)
 			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.")
 			imgui.Text("\t\t")
 
@@ -162,7 +166,7 @@ func loggingThread(log *logging.Logger) {
 /*renderConsoleWindow Used to display log messages */
 func renderConsoleWindow() {
 
-	imgui.Begin("Logging Console")
+	imgui.BeginV("Logging Console", &open, imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoFocusOnAppearing)
 	imgui.Checkbox("Autoscroll", &autoScroll)
 	imgui.BeginChild("unformatted")
 	imgui.Text(logText)

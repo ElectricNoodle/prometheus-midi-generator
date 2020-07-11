@@ -22,9 +22,9 @@ type config struct {
 	ProcessorConfig  processor.Config `yaml:"processor_config"`
 }
 
-var configuration *config
-
 var log *logging.Logger
+
+var configuration *config
 var scraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
 var midiEmitter *midioutput.MIDIEmitter
@@ -41,27 +41,27 @@ func main() {
 
 func loadConfig(path string) *config {
 
-	var c *config
+	var conf *config
 
 	yamlFile, err := ioutil.ReadFile(path)
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}
 
-	err = yaml.Unmarshal(yamlFile, &c)
+	err = yaml.Unmarshal(yamlFile, &conf)
 	if err != nil {
 		log.Fatalf("Unmarshal: %v", err)
 	}
 
-	if c.PrometheusServer == "" {
+	if conf.PrometheusServer == "" {
 		log.Fatal("Configuration file invalid: No Prometheus server is defined.\n")
 	}
 
-	if len(c.ProcessorConfig.Scales) < 1 {
+	if len(conf.ProcessorConfig.Scales) < 1 {
 		log.Fatal("Processor configuration doesn't contain any scale definitions.\n")
 	}
 
-	for _, scale := range c.ProcessorConfig.Scales {
+	for _, scale := range conf.ProcessorConfig.Scales {
 		if scale.Name == "" {
 			log.Fatal("Configuration file invalid: Scale defined without name.\n")
 		}
@@ -70,7 +70,7 @@ func loadConfig(path string) *config {
 		}
 	}
 
-	return c
+	return conf
 }
 
 func initializeBackend() {

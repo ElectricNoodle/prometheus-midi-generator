@@ -119,6 +119,7 @@ func (renderer *OpenGL3) Render(displaySize [2]float32, framebufferSize [2]float
 	// Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
 	// DisplayMin is typically (0,0) for single viewport apps.
 	gl.Viewport(0, 0, int32(fbWidth), int32(fbHeight))
+
 	orthoProjection := [4][4]float32{
 		{2.0 / displayWidth, 0.0, 0.0, 0.0},
 		{0.0, 2.0 / -displayHeight, 0.0, 0.0},

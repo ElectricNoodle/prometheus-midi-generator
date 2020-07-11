@@ -7,7 +7,10 @@ out vec2 coord;
 
 void main() {
 
-    gl_Position =  u_mvp * vec4(vertexPosition_modelspace,1);
+    gl_Position = u_mvp * vec4(vertexPosition_modelspace,1);
     coord = vertexPosition_modelspace.xy;
     
 }
+
+
+

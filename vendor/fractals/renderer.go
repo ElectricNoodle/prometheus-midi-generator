@@ -178,12 +178,8 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	model := mgl32.Ident4()
 	scale := mgl32.Scale3D(2.0, 2.0, 2.0)
 
-	//rotationX := mgl32.HomogRotate3DX(float32(time))
-	//rotationY := mgl32.HomogRotate3DY(float32(time / 2))
-	//rotationZ := mgl32.HomogRotate3DZ(float32(time / 4))
-
 	timeLocation := gl.GetUniformLocation(renderer.program, gl.Str("u_time"+"\x00"))
-	modelViewProjection := projection.Mul4(view).Mul4(model).Mul4(scale) //.Mul4(rotationY).Mul4(rotationX).Mul4(rotationZ)
+	modelViewProjection := projection.Mul4(view).Mul4(model).Mul4(scale)
 	shaderMvp := gl.GetUniformLocation(renderer.program, gl.Str("u_mvp"+"\x00"))
 
 	gl.UseProgram(renderer.program)
@@ -194,6 +190,10 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(renderSurface)/3))
 
 	glfw.PollEvents()
+}
+
+func (renderer *FractalRenderer) updateFPS(time float64) {
+
 }
 
 /*KeyCallback Passed to platform so we get key events. */
