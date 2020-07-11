@@ -11,6 +11,7 @@ uniform float uTime;
 uniform vec2 posOffset = vec2(-1.2,0);
 uniform float zoomOffset = 1.0;
 uniform float rotOffset = 0.0;
+uniform vec2 rotPivot = vec2(0,0);
 
 // Used to keep track of coloring modes per channel.
 uniform int rMode = 0;
@@ -26,8 +27,8 @@ uniform float bOffset = 0.1;
 uniform float maxIterations = 20;
 
 // What power to use in the Mandelbrot equation.
-int exponentOne = 2;
-int exponentTwo = 2;
+uniform float exponentOne = 2;
+uniform float exponentTwo = 2;
 
 // Applied to the return value of the Mandelbrot equation. 
 uniform float divModifier = 1.0;
@@ -41,7 +42,7 @@ out vec4 fragColor;
 vec2 squareImaginary(vec2 number){
     return vec2(
         pow(number.x,exponentOne)-pow(number.y,exponentTwo),
-        2*number.x*number.y
+        exponentTwo*number.x*number.y
     );
 }
 
@@ -50,7 +51,7 @@ float iterateMandelbrot(vec2 coord){
     for(int i=0;i<maxIterations;i++){
 
         z = squareImaginary(z) + coord;
-        if(length(z.x)>maxIterations + (cos(uTime)*17) ) return i/maxIterations; // dd this to maxIterations for fun + (cos(uTime)*19.3)
+        if(length(z.x)>maxIterations + (cos(uTime)*17) ) return i/maxIterations;
 
     }
     return maxIterations;
@@ -84,10 +85,9 @@ float getColor(float num, float offset, int mode) {
 // Calculates Mandelbrot value then uses it to set the colour depending on the mode.
 void main() {
 
-    vec2 pivot = vec2(0.0, 0.0);
     vec2 coord = iCoord + posOffset;
 
-    coord = rotate(coord, pivot, rotOffset);
+    coord = rotate(coord, rotPivot, rotOffset);
     coord = coord * zoomOffset;
 
     float mandleBrotValue = (iterateMandelbrot(coord) * multModifier / divModifier);

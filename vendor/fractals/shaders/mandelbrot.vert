@@ -7,6 +7,7 @@ uniform float uTime;
 uniform vec2 posOffset = vec2(-1.2,0);
 uniform float zoomOffset = 1.0;
 uniform float rotOffset = 0.0;
+uniform vec2 rotPivot = vec2(0,0);
 
 // Used to keep track of coloring modes per channel.
 uniform int rMode = 0;
@@ -22,8 +23,8 @@ uniform float bOffset = 0.1;
 uniform float maxIterations = 20;
 
 // What power to use in the Mandelbrot equation.
-int exponentOne = 2;
-int exponentTwo = 2;
+uniform float exponentOne = 2;
+uniform float exponentTwo = 2;
 
 // Applied to the return value of the Mandelbrot equation. 
 uniform float divModifier = 1.0;

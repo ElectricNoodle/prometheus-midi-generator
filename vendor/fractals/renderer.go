@@ -34,16 +34,20 @@ const (
 	JuliaSet   FractalType = 1
 )
 
+var lastTime = 0.0
+var frameCount = 0
+
 /*MandlebrotInfo Stores all the useful variables for the Mandelbrot Shader*/
 type MandlebrotInfo struct {
 	position         mgl32.Vec2
 	zoom             float32
 	rotation         float32
+	rotationPivot    mgl32.Vec2
 	colorModes       []int32
 	colorOffsets     []float32
-	maxIterations    int32
-	exponentOne      int32
-	exponentTwo      int32
+	maxIterations    float32
+	exponentOne      float32
+	exponentTwo      float32
 	divideModifier   float32
 	multiplyModifier float32
 	escapeModifier   float32
@@ -54,6 +58,7 @@ type FractalRenderer struct {
 	initialized    bool
 	program        uint32
 	vao            uint32
+	fps            int
 	vertexShader   uint32
 	fragmentShader uint32
 	activeFractal  *FractalType
@@ -64,8 +69,8 @@ type FractalRenderer struct {
 func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
-	renderer := FractalRenderer{false, 0, 0, 0, 0, nil,
-		MandlebrotInfo{mgl32.Vec2{-1.2, 0.0}, 1.0, 0.0, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}}
+	renderer := FractalRenderer{false, 0, 0, 0, 0, 0.0, nil,
+		MandlebrotInfo{mgl32.Vec2{0.0, 0.0}, 1.5, 0.0, mgl32.Vec2{0.0, 0.0}, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}}
 
 	return &renderer
 }
@@ -210,34 +215,19 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 
 	renderer.updateFractalShaderVariables()
 
-	renderer.mandlebrotInfo.position[0] = renderer.mandlebrotInfo.position[0] + 0.001
-	renderer.mandlebrotInfo.rotation = renderer.mandlebrotInfo.rotation + 0.001
-
-	renderer.mandlebrotInfo.colorModes[0] = 0
-	renderer.mandlebrotInfo.colorModes[1] = 2
-	renderer.mandlebrotInfo.colorModes[2] = 1
-
 	gl.BindVertexArray(renderer.vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(renderSurface)/3))
 
+	renderer.updateFPS(time)
 	glfw.PollEvents()
 }
 
-/*
-
-// Applied to the return value of the Mandelbrot equation.
-uniform float mandleDivModifier = 1.0;
-uniform float mandleMultModifier = 1.0;
-
-// Applied to the conditional in the Mandelrot equation.
-uniform float mandleEscapeModifier = 0.0;
-
-*/
 func (renderer *FractalRenderer) updateFractalShaderVariables() {
 
 	posOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("posOffset"+"\x00"))
 	zoomOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("zoomOffset"+"\x00"))
 	rotOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("rotOffset"+"\x00"))
+	rotPivotLocation := gl.GetUniformLocation(renderer.program, gl.Str("rotPivot"+"\x00"))
 	rModeLocation := gl.GetUniformLocation(renderer.program, gl.Str("rMode"+"\x00"))
 	gModeLocation := gl.GetUniformLocation(renderer.program, gl.Str("gMode"+"\x00"))
 	bModeLocation := gl.GetUniformLocation(renderer.program, gl.Str("bMode"+"\x00"))
@@ -255,15 +245,16 @@ func (renderer *FractalRenderer) updateFractalShaderVariables() {
 	gl.Uniform2fv(posOffsetLocation, 1, &renderer.mandlebrotInfo.position[0])
 	gl.Uniform1f(zoomOffsetLocation, renderer.mandlebrotInfo.zoom)
 	gl.Uniform1f(rotOffsetLocation, renderer.mandlebrotInfo.rotation)
+	gl.Uniform2fv(rotPivotLocation, 1, &renderer.mandlebrotInfo.rotationPivot[0])
 	gl.Uniform1i(rModeLocation, renderer.mandlebrotInfo.colorModes[0])
 	gl.Uniform1i(gModeLocation, renderer.mandlebrotInfo.colorModes[1])
 	gl.Uniform1i(bModeLocation, renderer.mandlebrotInfo.colorModes[2])
 	gl.Uniform1f(rOffsetLocation, renderer.mandlebrotInfo.colorOffsets[0])
 	gl.Uniform1f(bOffsetLocation, renderer.mandlebrotInfo.colorOffsets[1])
 	gl.Uniform1f(gOffsetLocation, renderer.mandlebrotInfo.colorOffsets[2])
-	gl.Uniform1i(iterOffsetLocation, renderer.mandlebrotInfo.maxIterations)
-	gl.Uniform1i(exponentOneLocation, renderer.mandlebrotInfo.exponentOne)
-	gl.Uniform1i(exponentTwoLocation, renderer.mandlebrotInfo.exponentTwo)
+	gl.Uniform1f(iterOffsetLocation, renderer.mandlebrotInfo.maxIterations)
+	gl.Uniform1f(exponentOneLocation, renderer.mandlebrotInfo.exponentOne)
+	gl.Uniform1f(exponentTwoLocation, renderer.mandlebrotInfo.exponentTwo)
 	gl.Uniform1f(divModifierLocation, renderer.mandlebrotInfo.divideModifier)
 	gl.Uniform1f(multModifierLocation, renderer.mandlebrotInfo.multiplyModifier)
 	gl.Uniform1f(escapeModifierLocation, renderer.mandlebrotInfo.escapeModifier)
@@ -271,10 +262,18 @@ func (renderer *FractalRenderer) updateFractalShaderVariables() {
 }
 
 func (renderer *FractalRenderer) updateFPS(time float64) {
+	if (time - lastTime) >= 1.0 {
 
+		renderer.fps = frameCount
+		frameCount = 0
+		lastTime = time
+
+	}
+	frameCount++
 }
 
 /*KeyCallback Passed to platform so we get key events. */
 func (renderer *FractalRenderer) KeyCallback(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
 	log.Println("Debug:", key)
+
 }
