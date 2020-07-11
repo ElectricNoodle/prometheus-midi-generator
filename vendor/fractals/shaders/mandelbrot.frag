@@ -7,9 +7,10 @@ in vec2 iCoord;
 
 uniform float uTime;
 
-// Used for moving/zooming fractal.
+// Used for moving/zooming/rotating fractal.
 uniform vec2 posOffset = vec2(-1.2,0);
 uniform float zoomOffset = 1.0;
+uniform float rotOffset = 0.0;
 
 // Used to keep track of coloring modes per channel.
 uniform int rMode = 0;
@@ -25,21 +26,21 @@ uniform float bOffset = 0.1;
 uniform float maxIterations = 20;
 
 // What power to use in the Mandelbrot equation.
-int mandlePowerOne = 2;
-int mandlePowerTwo = 2;
+int exponentOne = 2;
+int exponentTwo = 2;
 
 // Applied to the return value of the Mandelbrot equation. 
-uniform float mandleDivModifier = 1.0;
-uniform float mandleMultModifier = 1.0;
+uniform float divModifier = 1.0;
+uniform float multModifier = 1.0;
 
 // Applied to the conditional in the Mandelrot equation.
-uniform float mandleEscapeModifier = 0.0;
+uniform float escapeModifier = 0.0;
 
 out vec4 fragColor;
 
 vec2 squareImaginary(vec2 number){
     return vec2(
-        pow(number.x,mandlePowerOne)-pow(number.y,mandlePowerTwo),
+        pow(number.x,exponentOne)-pow(number.y,exponentTwo),
         2*number.x*number.y
     );
 }
@@ -85,13 +86,14 @@ void main() {
 
     vec2 pivot = vec2(0.0, 0.0);
     vec2 coord = iCoord + posOffset;
-    coord = rotate(coord, pivot, 0);
+
+    coord = rotate(coord, pivot, rotOffset);
     coord = coord * zoomOffset;
 
-    float mandleBrotValue = (iterateMandelbrot(coord) * mandleMultModifier / mandleDivModifier);
+    float mandleBrotValue = (iterateMandelbrot(coord) * multModifier / divModifier);
     
     fragColor = vec4( getColor(mandleBrotValue, rOffset, rMode),
-                        getColor(mandleBrotValue, gOffset, gMode), 
-                        getColor(mandleBrotValue, bOffset, bMode),
-                        1.0);
+                      getColor(mandleBrotValue, gOffset, gMode), 
+                      getColor(mandleBrotValue, bOffset, bMode),
+                      1.0);
 }

@@ -25,6 +25,30 @@ var (
 	}
 )
 
+/*FractalType Type of fractal to draw */
+type FractalType int
+
+/*Values for above */
+const (
+	MandleBrot FractalType = 0
+	JuliaSet   FractalType = 1
+)
+
+/*MandlebrotInfo Stores all the useful variables for the Mandelbrot Shader*/
+type MandlebrotInfo struct {
+	position         mgl32.Vec2
+	zoom             float32
+	rotation         float32
+	colorModes       []int32
+	colorOffsets     []float32
+	maxIterations    int32
+	exponentOne      int32
+	exponentTwo      int32
+	divideModifier   float32
+	multiplyModifier float32
+	escapeModifier   float32
+}
+
 /*FractalRenderer Defines a Fractal Renderer*/
 type FractalRenderer struct {
 	initialized    bool
@@ -32,13 +56,16 @@ type FractalRenderer struct {
 	vao            uint32
 	vertexShader   uint32
 	fragmentShader uint32
+	activeFractal  *FractalType
+	mandlebrotInfo MandlebrotInfo
 }
 
 /*NewFractalRenderer Returns a new instance of FractalRenderer */
 func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
-	renderer := FractalRenderer{false, 0, 0, 0, 0}
+	renderer := FractalRenderer{false, 0, 0, 0, 0, nil,
+		MandlebrotInfo{mgl32.Vec2{-1.2, 0.0}, 1.0, 0.0, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}}
 
 	return &renderer
 }
@@ -159,11 +186,6 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 
 	projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(displayWidth)/displayHeight, 0.1, 10.0)
 
-	//	glm::vec3(4,3,3), // Camera is at (4,3,3), in World Space
-	//	glm::vec3(0,0,0), // and looks at the origin
-	//	glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
-
-	//radius := 5.0
 	cameraX := (float32)(0.95) //(float32)(math.Sin(time) * 0.5)
 	cameraY := (float32)(0)    //(float32)(math.Cos(time) * radius)
 	cameraZ := (float32)(3.7)
@@ -186,10 +208,66 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	gl.Uniform1f(timeLocation, float32(time))
 	gl.UniformMatrix4fv(shaderMvp, 1, false, &modelViewProjection[0])
 
+	renderer.updateFractalShaderVariables()
+
+	renderer.mandlebrotInfo.position[0] = renderer.mandlebrotInfo.position[0] + 0.001
+	renderer.mandlebrotInfo.rotation = renderer.mandlebrotInfo.rotation + 0.001
+
+	renderer.mandlebrotInfo.colorModes[0] = 0
+	renderer.mandlebrotInfo.colorModes[1] = 2
+	renderer.mandlebrotInfo.colorModes[2] = 1
+
 	gl.BindVertexArray(renderer.vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(renderSurface)/3))
 
 	glfw.PollEvents()
+}
+
+/*
+
+// Applied to the return value of the Mandelbrot equation.
+uniform float mandleDivModifier = 1.0;
+uniform float mandleMultModifier = 1.0;
+
+// Applied to the conditional in the Mandelrot equation.
+uniform float mandleEscapeModifier = 0.0;
+
+*/
+func (renderer *FractalRenderer) updateFractalShaderVariables() {
+
+	posOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("posOffset"+"\x00"))
+	zoomOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("zoomOffset"+"\x00"))
+	rotOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("rotOffset"+"\x00"))
+	rModeLocation := gl.GetUniformLocation(renderer.program, gl.Str("rMode"+"\x00"))
+	gModeLocation := gl.GetUniformLocation(renderer.program, gl.Str("gMode"+"\x00"))
+	bModeLocation := gl.GetUniformLocation(renderer.program, gl.Str("bMode"+"\x00"))
+	rOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("rMode"+"\x00"))
+	gOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("gMode"+"\x00"))
+	bOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("bMode"+"\x00"))
+	iterOffsetLocation := gl.GetUniformLocation(renderer.program, gl.Str("maxIterations"+"\x00"))
+	exponentOneLocation := gl.GetUniformLocation(renderer.program, gl.Str("exponentOne"+"\x00"))
+	exponentTwoLocation := gl.GetUniformLocation(renderer.program, gl.Str("exponentTwo"+"\x00"))
+	divModifierLocation := gl.GetUniformLocation(renderer.program, gl.Str("divModifier"+"\x00"))
+	multModifierLocation := gl.GetUniformLocation(renderer.program, gl.Str("multModifier"+"\x00"))
+	escapeModifierLocation := gl.GetUniformLocation(renderer.program, gl.Str("escapeModifier"+"\x00"))
+
+	gl.UseProgram(renderer.program)
+	gl.Uniform2fv(posOffsetLocation, 1, &renderer.mandlebrotInfo.position[0])
+	gl.Uniform1f(zoomOffsetLocation, renderer.mandlebrotInfo.zoom)
+	gl.Uniform1f(rotOffsetLocation, renderer.mandlebrotInfo.rotation)
+	gl.Uniform1i(rModeLocation, renderer.mandlebrotInfo.colorModes[0])
+	gl.Uniform1i(gModeLocation, renderer.mandlebrotInfo.colorModes[1])
+	gl.Uniform1i(bModeLocation, renderer.mandlebrotInfo.colorModes[2])
+	gl.Uniform1f(rOffsetLocation, renderer.mandlebrotInfo.colorOffsets[0])
+	gl.Uniform1f(bOffsetLocation, renderer.mandlebrotInfo.colorOffsets[1])
+	gl.Uniform1f(gOffsetLocation, renderer.mandlebrotInfo.colorOffsets[2])
+	gl.Uniform1i(iterOffsetLocation, renderer.mandlebrotInfo.maxIterations)
+	gl.Uniform1i(exponentOneLocation, renderer.mandlebrotInfo.exponentOne)
+	gl.Uniform1i(exponentTwoLocation, renderer.mandlebrotInfo.exponentTwo)
+	gl.Uniform1f(divModifierLocation, renderer.mandlebrotInfo.divideModifier)
+	gl.Uniform1f(multModifierLocation, renderer.mandlebrotInfo.multiplyModifier)
+	gl.Uniform1f(escapeModifierLocation, renderer.mandlebrotInfo.escapeModifier)
+
 }
 
 func (renderer *FractalRenderer) updateFPS(time float64) {
