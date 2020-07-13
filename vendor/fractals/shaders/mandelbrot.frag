@@ -76,7 +76,7 @@ float getColor(float num, float offset, int mode) {
         case 1:
             return num + offset;
         case 2:
-            return (0.5 + 0.5*cos(2.7+num*30.0 + offset)) ;
+            return (0.5 + 0.5 *cos(2.7 + num * 30.0 + offset)) ;
     }
     return 0.0;   
 }

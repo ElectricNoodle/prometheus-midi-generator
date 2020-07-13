@@ -63,6 +63,7 @@ type FractalRenderer struct {
 	fragmentShader uint32
 	activeFractal  *FractalType
 	mandlebrotInfo MandlebrotInfo
+	keyPressMap    map[glfw.Key]bool
 }
 
 /*NewFractalRenderer Returns a new instance of FractalRenderer */
@@ -70,7 +71,7 @@ func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
 	renderer := FractalRenderer{false, 0, 0, 0, 0, 0.0, nil,
-		MandlebrotInfo{mgl32.Vec2{0.0, 0.0}, 1.5, 0.0, mgl32.Vec2{0.0, 0.0}, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}}
+		MandlebrotInfo{mgl32.Vec2{0.0, 0.0}, 1.5, 0.0, mgl32.Vec2{0.0, 0.0}, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}, make(map[glfw.Key]bool)}
 
 	return &renderer
 }
@@ -218,6 +219,7 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	gl.BindVertexArray(renderer.vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(renderSurface)/3))
 
+	renderer.handleKeyPresses()
 	renderer.updateFPS(time)
 	glfw.PollEvents()
 }
@@ -261,6 +263,59 @@ func (renderer *FractalRenderer) updateFractalShaderVariables() {
 
 }
 
+func (renderer *FractalRenderer) handleKeyPresses() {
+
+	if val, ok := renderer.keyPressMap[glfw.KeyUp]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.position = renderer.mandlebrotInfo.position.Add(mgl32.Vec2{0, 0.01})
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyDown]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.position = renderer.mandlebrotInfo.position.Add(mgl32.Vec2{0, -0.01})
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyLeft]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.position = renderer.mandlebrotInfo.position.Add(mgl32.Vec2{-0.01, 0.0})
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyRight]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.position = renderer.mandlebrotInfo.position.Add(mgl32.Vec2{0.01, 0.0})
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyA]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.rotation += 0.01
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyZ]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.rotation -= 0.01
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyS]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.zoom += 0.01
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyX]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.zoom -= 0.01
+		}
+	}
+
+	//renderer.mandlebrotInfo.rotationPivot = renderer.mandlebrotInfo.position
+}
+
 func (renderer *FractalRenderer) updateFPS(time float64) {
 	if (time - lastTime) >= 1.0 {
 
@@ -272,8 +327,16 @@ func (renderer *FractalRenderer) updateFPS(time float64) {
 	frameCount++
 }
 
-/*KeyCallback Passed to platform so we get key events. */
+/*KeyCallback Passed to platform so we get key events.
+  Each event is a one shot, so we need to track which keys are held then move elsewhere in the render loop.
+*/
 func (renderer *FractalRenderer) KeyCallback(key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-	log.Println("Debug:", key)
 
+	if action == glfw.Press {
+		renderer.keyPressMap[key] = true
+	}
+
+	if action == glfw.Release {
+		renderer.keyPressMap[key] = false
+	}
 }
