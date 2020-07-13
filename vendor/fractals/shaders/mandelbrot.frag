@@ -85,11 +85,10 @@ float getColor(float num, float offset, int mode) {
 // Calculates Mandelbrot value then uses it to set the colour depending on the mode.
 void main() {
 
-    vec2 coord = iCoord + posOffset;
-
+    vec2 coord = iCoord * zoomOffset;
+    coord = coord + posOffset;
     coord = rotate(coord, rotPivot, rotOffset);
-    coord = coord * zoomOffset;
-
+    
     float mandleBrotValue = (iterateMandelbrot(coord) * multModifier / divModifier);
     
     fragColor = vec4( getColor(mandleBrotValue, rOffset, rMode),
