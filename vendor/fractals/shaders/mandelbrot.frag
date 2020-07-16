@@ -81,14 +81,38 @@ float getColor(float num, float offset, int mode) {
     return 0.0;   
 }
 
+vec2 rotateScaleTranslate(vec2 position, float rotation, float zoom, vec2 posOffset, vec2 pivot) {
+
+    float s = sin(rotation);
+    float c = cos(rotation);
+
+    mat3 translation = mat3(1,0, 0,
+                            0,1, 0,
+                            posOffset.x,posOffset.y,1);
+
+    mat3 rotMat = mat3( c, s,0,
+                        -s,c,0,
+                         0,0,1);
+
+    mat3 scaleMat = mat3(zoom,0,0,
+                         0, zoom, 0,
+                         0, 0, 1);
+
+
+
+   // vec3 result =rotMat * scaleMat * translation  * vec3(position - pivot,1.0) + vec3(pivot, 1.0);
+    vec3 result =rotMat * scaleMat * translation  *vec3(position,1.0);
+    return vec2(result.x,result.y);
+}
+
 // Handles move/rotate/zoom of current coordinates.
 // Calculates Mandelbrot value then uses it to set the colour depending on the mode.
 void main() {
 
-    vec2 coord = iCoord * zoomOffset;
-    coord = coord + posOffset;
-    coord = rotate(coord, rotPivot, rotOffset);
-    
+    vec2 coord = rotateScaleTranslate(iCoord, rotOffset, zoomOffset, posOffset,rotPivot);
+
+//    coord = coord + posOffset;
+
     float mandleBrotValue = (iterateMandelbrot(coord) * multModifier / divModifier);
     
     fragColor = vec4( getColor(mandleBrotValue, rOffset, rMode),

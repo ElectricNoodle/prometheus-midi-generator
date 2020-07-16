@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"logging"
+	"math"
 	"strings"
 
 	"github.com/go-gl/gl/v3.2-core/gl"
@@ -63,6 +64,7 @@ type FractalRenderer struct {
 	fragmentShader uint32
 	activeFractal  *FractalType
 	mandlebrotInfo MandlebrotInfo
+	keysEnabled    bool
 	keyPressMap    map[glfw.Key]bool
 }
 
@@ -71,7 +73,7 @@ func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
 	renderer := FractalRenderer{false, 0, 0, 0, 0, 0.0, nil,
-		MandlebrotInfo{mgl32.Vec2{0.0, 0.0}, 1.5, 0.0, mgl32.Vec2{0.0, 0.0}, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}, make(map[glfw.Key]bool)}
+		MandlebrotInfo{mgl32.Vec2{0.0, 0.0}, 1.5, 0.0, mgl32.Vec2{0.0, 0.0}, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}, true, make(map[glfw.Key]bool)}
 
 	return &renderer
 }
@@ -219,7 +221,13 @@ func (renderer *FractalRenderer) Render(displaySize [2]float32, framebufferSize 
 	gl.BindVertexArray(renderer.vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(renderSurface)/3))
 
-	renderer.handleKeyPresses()
+	if renderer.keysEnabled {
+		renderer.handleKeyPresses()
+	}
+
+	renderer.mandlebrotInfo.rotation = renderer.mandlebrotInfo.rotation + 0.008
+	renderer.mandlebrotInfo.position = mgl32.Vec2{-0.8 + (float32)(math.Cos(time))/6, (float32)(math.Cos(time)) / 6}
+
 	renderer.updateFPS(time)
 	glfw.PollEvents()
 }
@@ -303,17 +311,30 @@ func (renderer *FractalRenderer) handleKeyPresses() {
 
 	if val, ok := renderer.keyPressMap[glfw.KeyS]; ok {
 		if val == true {
-			renderer.mandlebrotInfo.zoom += 0.01
+			renderer.mandlebrotInfo.zoom -= 0.01
 		}
 	}
 
 	if val, ok := renderer.keyPressMap[glfw.KeyX]; ok {
 		if val == true {
-			renderer.mandlebrotInfo.zoom -= 0.01
+			renderer.mandlebrotInfo.zoom += 0.01
 		}
 	}
 
-	//renderer.mandlebrotInfo.rotationPivot = renderer.mandlebrotInfo.position
+	if val, ok := renderer.keyPressMap[glfw.KeyD]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.maxIterations += 1
+		}
+	}
+
+	if val, ok := renderer.keyPressMap[glfw.KeyC]; ok {
+		if val == true {
+			renderer.mandlebrotInfo.maxIterations -= 1
+		}
+	}
+
+	renderer.mandlebrotInfo.rotationPivot = renderer.mandlebrotInfo.position
+
 }
 
 func (renderer *FractalRenderer) updateFPS(time float64) {
