@@ -171,11 +171,11 @@ func renderConsoleWindow() {
 	imgui.BeginChild("unformatted")
 	imgui.Text(logText)
 
-	if autoScroll && imgui.GetScrollMaxY() > 0 {
+	//if autoScroll && imgui.GetScrollMaxY() > 0 {
 
-		imgui.SetScrollHereY(1.0)
+	imgui.SetScrollHereY(1.0)
 
-	}
+	//}
 
 	imgui.EndChild()
 	imgui.End()
