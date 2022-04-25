@@ -1,12 +1,13 @@
 package gui
 
 import (
-	"fractals"
-	"logging"
-	"midioutput"
-	"processor"
-	"prometheus"
 	"time"
+
+	"github.com/ElectricNoodle/prometheus-midi-generator/fractals"
+	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
+	"github.com/ElectricNoodle/prometheus-midi-generator/midioutput"
+	"github.com/ElectricNoodle/prometheus-midi-generator/processor"
+	"github.com/ElectricNoodle/prometheus-midi-generator/prometheus"
 
 	"github.com/go-gl/gl/v3.2-core/gl"
 	"github.com/inkyblackness/imgui-go"

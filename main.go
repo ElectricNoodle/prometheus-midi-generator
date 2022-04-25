@@ -1,18 +1,18 @@
-2package main
+package main
 
 import (
 	"fmt"
-	"fractals"
-	"gui"
-	"gui/platforms"
-	"gui/renderers"
 	"io/ioutil"
-	"logging"
-	"midioutput"
 	"os"
-	"processor"
-	"prometheus"
 
+	"github.com/ElectricNoodle/prometheus-midi-generator/fractals"
+	"github.com/ElectricNoodle/prometheus-midi-generator/gui"
+	"github.com/ElectricNoodle/prometheus-midi-generator/gui/platforms"
+	"github.com/ElectricNoodle/prometheus-midi-generator/gui/renderers"
+	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
+	"github.com/ElectricNoodle/prometheus-midi-generator/midioutput"
+	"github.com/ElectricNoodle/prometheus-midi-generator/processor"
+	"github.com/ElectricNoodle/prometheus-midi-generator/prometheus"
 	"github.com/inkyblackness/imgui-go"
 	"gopkg.in/yaml.v2"
 )

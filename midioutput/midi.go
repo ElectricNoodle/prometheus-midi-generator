@@ -1,7 +1,7 @@
 package midioutput
 
 import (
-	"logging"
+	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
 
 	"github.com/rakyll/portmidi"
 )

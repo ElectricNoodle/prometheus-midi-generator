@@ -2,10 +2,12 @@ package processor
 
 import (
 	"container/list"
-	"logging"
-	"math"
-	"midioutput"
 	"time"
+
+	"math"
+
+	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
+	"github.com/ElectricNoodle/prometheus-midi-generator/midioutput"
 
 	"github.com/elliotchance/orderedmap"
 )

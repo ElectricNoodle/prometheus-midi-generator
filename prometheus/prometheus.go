@@ -2,10 +2,11 @@ package prometheus
 
 import (
 	"encoding/json"
-	"logging"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
 
 	"github.com/golang-collections/go-datastructures/queue"
 )
