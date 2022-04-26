@@ -69,12 +69,38 @@ type FractalRenderer struct {
 	keyPressMap    map[glfw.Key]bool
 }
 
-/*NewFractalRenderer Returns a new instance of FractalRenderer */
+/*NewFractalRenderer Returns a new instance of FractalRenderer
+
+position         mgl32.Vec2
+zoom             float32
+rotation         float32
+rotationPivot    mgl32.Vec2
+colorModes       []int32
+colorOffsets     []float32
+maxIterations    float32
+exponentOne      float32
+exponentTwo      float32
+divideModifier   float32
+multiplyModifier float32
+escapeModifier   float32
+*/
 func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
 	renderer := FractalRenderer{false, 0, 0, 0, 0, 0.0, nil,
-		MandlebrotInfo{mgl32.Vec2{0.0, 0.0}, 1.5, 0.0, mgl32.Vec2{0.0, 0.0}, []int32{0, 2, 1}, []float32{0.0, 0.0, 0.0}, 20, 2, 2, 1.0, 1.0, 0.0}, true, make(map[glfw.Key]bool)}
+		MandlebrotInfo{position: mgl32.Vec2{0.0, 0.0},
+			zoom:             1.5,
+			rotation:         0.0,
+			rotationPivot:    mgl32.Vec2{0.0, 0.0},
+			colorModes:       []int32{0, 2, 1},
+			colorOffsets:     []float32{0.0, 0.0, 0.0},
+			maxIterations:    20,
+			exponentOne:      2,
+			exponentTwo:      2,
+			divideModifier:   1.0,
+			multiplyModifier: 1.0,
+			escapeModifier:   0.0},
+		true, make(map[glfw.Key]bool)}
 
 	return &renderer
 }
@@ -107,14 +133,14 @@ func (renderer *FractalRenderer) initOpenGL() {
 	version := gl.GoStr(gl.GetString(gl.VERSION))
 	log.Printf("OpenGL version %s\n", version)
 
-	vertexShaderSource := renderer.loadShader("vendor/fractals/shaders/mandelbrot.vert") + "\x00"
+	vertexShaderSource := renderer.loadShader("fractals/shaders/mandelbrot.vert") + "\x00"
 	vertexShader, err := renderer.compileShader(vertexShaderSource, gl.VERTEX_SHADER)
 
 	if err != nil {
 		panic(err)
 	}
 
-	fragmentShaderSource := renderer.loadShader("vendor/fractals/shaders/mandelbrot.frag") + "\x00"
+	fragmentShaderSource := renderer.loadShader("fractals/shaders/mandelbrot.frag") + "\x00"
 	fragmentShader, err := renderer.compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER)
 
 	if err != nil {

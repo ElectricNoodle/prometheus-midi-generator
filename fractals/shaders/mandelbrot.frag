@@ -8,7 +8,7 @@ in vec2 iCoord;
 uniform float uTime;
 
 // Used for moving/zooming/rotating fractal.
-uniform vec2 posOffset = vec2(-1.2,0);
+uniform vec2 posOffset = vec2(-4.0,0);
 uniform float zoomOffset = 1.0;
 uniform float rotOffset = 0.0;
 uniform vec2 rotPivot = vec2(0,0);
@@ -24,7 +24,7 @@ uniform float gOffset = 0.6;
 uniform float bOffset = 0.1;
 
 // Overall max number of iterations
-uniform float maxIterations = 20;
+uniform float maxIterations = 120;
 
 // What power to use in the Mandelbrot equation.
 uniform float exponentOne = 2;
@@ -100,7 +100,7 @@ vec2 rotateScaleTranslate(vec2 position, float rotation, float zoom, vec2 posOff
 
 
 
-   // vec3 result =rotMat * scaleMat * translation  * vec3(position - pivot,1.0) + vec3(pivot, 1.0);
+    //vec3 result =rotMat * scaleMat * translation  * vec3(position - pivot,1.0) + vec3(pivot, 1.0);
     vec3 result =rotMat * scaleMat * translation  *vec3(position,1.0);
     return vec2(result.x,result.y);
 }
@@ -111,8 +111,7 @@ void main() {
 
     vec2 coord = rotateScaleTranslate(iCoord, rotOffset, zoomOffset, posOffset,rotPivot);
 
-//    coord = coord + posOffset;
-
+    //coord = coord + posOffset;
     float mandleBrotValue = (iterateMandelbrot(coord) * multModifier / divModifier);
     
     fragColor = vec4( getColor(mandleBrotValue, rOffset, rMode),

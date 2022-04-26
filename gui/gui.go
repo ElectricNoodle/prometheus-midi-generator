@@ -63,14 +63,14 @@ var midiDevicesPos int32
 var prometheusPollRatePos int32
 var prometheusPollRate = 4000
 
-var metric = "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})"
-
+//var metric = "max(pf_states{instance=~'sovapn[1|2]:9116', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='fwstates', operator='jerseyt'})  + max(pf_states{instance=~'sovapn[1|2]:9100', protocol=~'tcp', state=~'ESTABLISHED:ESTABLISHED', type='nat', operator='jerseyt'})"
+var metric = "pf_current_entries_total{instance=~'sovapn2:9116'}"
 var prometheusModePos int32
 var prometheusMode = prometheus.Live
 var prometheusModes = []string{"Live", "Playback"}
 
-var prometheusStartDate = "2020-06-01 00:00"
-var prometheusEndDate = "2020-06-30 23:59"
+var prometheusStartDate = "2022-04-01 00:00"
+var prometheusEndDate = "2022-04-01 23:59"
 
 var processorKeysPos int32
 
@@ -109,8 +109,10 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 		}
 
 		{
+			//			imgui.BeginV("Prometheus Fractal/MIDI Generator", &open, imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoTitleBar)
+			imgui.BeginV("Prometheus Fractal/MIDI Generator", &open, imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoTitleBar)
 
-			imgui.BeginV("Prometheus Fractal/MIDI Generator", &open, imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoTitleBar)
+			//imgui.BeginV("Prometheus Fractal/MIDI Generator", &open, imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoTitleBar)
 			imgui.Text("A visual/musical generation/exploration tool using Prometheus metrics.")
 			imgui.Text("\t\t")
 
@@ -167,7 +169,7 @@ func loggingThread(log *logging.Logger) {
 /*renderConsoleWindow Used to display log messages */
 func renderConsoleWindow() {
 
-	imgui.BeginV("Logging Console", &open, imgui.WindowFlagsNoMove|imgui.WindowFlagsNoResize|imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoFocusOnAppearing)
+	imgui.BeginV("Logging Console", &open, imgui.WindowFlagsNoCollapse|imgui.WindowFlagsNoFocusOnAppearing)
 	imgui.Checkbox("Autoscroll", &autoScroll)
 	imgui.BeginChild("unformatted")
 	imgui.Text(logText)

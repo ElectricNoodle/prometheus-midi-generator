@@ -4,7 +4,7 @@ layout(location = 0) in vec3 vertexPosition_modelspace;
 uniform float uTime;
 
 // Used for moving/zooming/rotating fractal.
-uniform vec2 posOffset = vec2(-1.2,0);
+uniform vec2 posOffset = vec2(-4.0,0);
 uniform float zoomOffset = 1.0;
 uniform float rotOffset = 0.0;
 uniform vec2 rotPivot = vec2(0,0);
@@ -20,7 +20,7 @@ uniform float gOffset = 0.6;
 uniform float bOffset = 0.1;
 
 // Overall max number of iterations
-uniform float maxIterations = 20;
+uniform float maxIterations = 120;
 
 // What power to use in the Mandelbrot equation.
 uniform float exponentOne = 2;
