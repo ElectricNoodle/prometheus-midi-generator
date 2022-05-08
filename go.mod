@@ -9,6 +9,7 @@ require (
 	github.com/go-gl/mathgl v1.0.0
 	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
 	github.com/inkyblackness/imgui-go v1.12.0
+	github.com/inkyblackness/imgui-go/v4 v4.4.0
 	github.com/rakyll/portmidi v0.0.0-20201020180702-d436ceaa537a
 	gopkg.in/yaml.v2 v2.4.0
 )

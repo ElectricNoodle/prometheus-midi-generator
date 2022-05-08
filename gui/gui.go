@@ -10,7 +10,7 @@ import (
 	"github.com/ElectricNoodle/prometheus-midi-generator/prometheus"
 
 	"github.com/go-gl/gl/v3.2-core/gl"
-	"github.com/inkyblackness/imgui-go"
+	"github.com/inkyblackness/imgui-go/v4"
 )
 
 var log *logging.Logger
@@ -123,17 +123,16 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 			imgui.Text("\t\t")
 			imgui.Separator()
 
-			renderMIDIOptions(midiEmitter)
+			if imgui.CollapsingHeader("MIDI Options") {
+				renderMIDIOptions(midiEmitter)
+			}
 
-			imgui.Text("\t\t")
-			imgui.Separator()
-
-			renderPrometheusOptions(scraper)
-
-			imgui.Text("\t")
-			imgui.Separator()
-
-			renderProcessorOptions(procInfo)
+			if imgui.CollapsingHeader("Prometheus Options") {
+				renderPrometheusOptions(scraper)
+			}
+			if imgui.CollapsingHeader("Processor Options") {
+				renderProcessorOptions(procInfo)
+			}
 
 			renderStartStopButtons(scraper)
 

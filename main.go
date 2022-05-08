@@ -13,7 +13,7 @@ import (
 	"github.com/ElectricNoodle/prometheus-midi-generator/midioutput"
 	"github.com/ElectricNoodle/prometheus-midi-generator/processor"
 	"github.com/ElectricNoodle/prometheus-midi-generator/prometheus"
-	"github.com/inkyblackness/imgui-go"
+	"github.com/inkyblackness/imgui-go/v4"
 	"gopkg.in/yaml.v2"
 )
 
