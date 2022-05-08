@@ -2,8 +2,9 @@ package midioutput
 
 import (
 	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
-
 	"github.com/rakyll/portmidi"
+	"gitlab.com/gomidi/midi/v2"
+	_ "gitlab.com/gomidi/midi/v2/drivers/portmididrv" // autoregisters driver
 )
 
 var log *logging.Logger
@@ -86,7 +87,7 @@ type MIDIEmitter struct {
 	MIDIDevices    []midiDevice
 	configuredPort int
 	deviceCount    int
-	midiOutput     *portmidi.Stream
+	midiOutput     int
 }
 
 var maxDevices = 10
@@ -95,7 +96,7 @@ var maxDevices = 10
 func NewMidi(logIn *logging.Logger, inputChannel <-chan MIDIMessage) *MIDIEmitter {
 
 	log = logIn
-	midiEmitter := MIDIEmitter{make(chan ControlMessage, 6), inputChannel, []midiDevice{}, 0, 0, nil}
+	midiEmitter := MIDIEmitter{make(chan ControlMessage, 6), inputChannel, []midiDevice{}, 0, 0, -1}
 
 	midiEmitter.initMIDI()
 
@@ -107,29 +108,20 @@ func NewMidi(logIn *logging.Logger, inputChannel <-chan MIDIMessage) *MIDIEmitte
 /*initMIDI Initializes the portmidi library and stores device info. */
 func (midiEmitter *MIDIEmitter) initMIDI() {
 
-	err := portmidi.Initialize()
+	var err error
+	defer midi.CloseDriver()
+	outs := midi.OutPorts()
+
+	for _, o := range outs {
+		log.Printf("Found MIDI Port: %s\n", o)
+	}
 
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	for i := 0; i < portmidi.CountDevices(); i++ {
-
-		device := portmidi.Info(portmidi.DeviceID(i))
-
-		if device.IsOutputAvailable == true && device.IsOpened == false {
-
-			midiEmitter.MIDIDevices = append(midiEmitter.MIDIDevices, midiDevice{id: i, info: device})
-			midiEmitter.deviceCount++
-		}
-	}
-
-	if midiEmitter.deviceCount < 1 {
-		log.Println("Error no MIDI devices available")
-		return
+		log.Printf("Failed to open MIDI port (%v)\n", err)
 	}
 
 	midiEmitter.setDevice(0)
+
 }
 
 /*GetDeviceNames returns an array of midi device names. */
@@ -164,45 +156,49 @@ func (midiEmitter *MIDIEmitter) controlThread() {
 
 func (midiEmitter *MIDIEmitter) setDevice(id int) {
 
-	if midiEmitter.midiOutput != nil {
-
-		err := midiEmitter.midiOutput.Close()
-
-		if err != nil {
-			log.Printf("Error: %s", err)
-			return
-		}
-
-	}
-
-	if midiEmitter.MIDIDevices[id] != (midiDevice{}) {
-
-		if midiEmitter.MIDIDevices[id].info != nil {
-			out, err := portmidi.NewOutputStream(portmidi.DeviceID(midiEmitter.MIDIDevices[id].id), 1024, 0)
-
-			if err != nil {
-				log.Printf("Error: %s", err)
-				return
-			}
-
-			midiEmitter.midiOutput = out
-			log.Printf("Switched to %s.\n", midiEmitter.MIDIDevices[id].info.Name)
-		}
-	}
-
 }
 
 func (midiEmitter *MIDIEmitter) emitThread() {
+	out := midi.FindOutPort("USB Midi")
+	sendMessage, err := midi.SendTo(out)
+
+	if err != nil {
+		log.Printf("Failed to send midi message. (%v)\n", err)
+	}
+
 	for {
+
 		message := <-midiEmitter.input
-		//log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+
+		if sendMessage != nil {
+
+			var midiMessage midi.Message
+			if message.Type == NoteOn {
+				log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+				midiMessage = midi.NoteOn(1, uint8(int(octaveOffsets[message.Octave])+message.Note), uint8(message.Velocity))
+
+			} else if message.Type == NoteOff {
+				log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+				midiMessage = midi.NoteOff(1, uint8(int(octaveOffsets[message.Octave])+message.Note))
+			}
+
+			err := sendMessage(midiMessage)
+
+			if err != nil {
+				log.Printf("Failed to send midi message. (%v)\n", err)
+			}
+
+		} else {
+			log.Println("No MIDI Device configured.")
+		}
+		/*miiEmitter.midiOutput.WriteShort(0x80, 60, 100)
 
 		if midiEmitter.midiOutput != nil {
 
 			midiEmitter.midiOutput.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
 
 		} else {
-			log.Println("No MIDI Device configured.")
 		}
+		*/
 	}
 }

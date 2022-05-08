@@ -103,7 +103,7 @@ const (
 	singleNoteVariance velocityMode = 1
 )
 
-const maxVelocity = 127
+const maxVelocity = 110
 const defaultVelocity = 0
 
 const maxEvents = 15
@@ -138,7 +138,7 @@ func NewProcessor(logIn *logging.Logger, processorConfig Config, inputChannel ch
 		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
 
 	processor.parseScales(processorConfig.Scales)
-	processor.generateNotesOfScale(noteIndexes["C"])
+	processor.generateNotesOfScale(noteIndexes["A"])
 	processor.setScale("Chromatic")
 
 	go processor.controlThread()
@@ -433,6 +433,7 @@ func (processor *ProcInfo) handleEvents() {
 
 				processor.events[i].state = active
 				processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
+				//processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn}
 				break
 			} else if e.state == stop {
 				processor.events[i] = event{}

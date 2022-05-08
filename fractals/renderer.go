@@ -88,18 +88,19 @@ func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
 	renderer := FractalRenderer{false, 0, 0, 0, 0, 0.0, nil,
-		MandlebrotInfo{position: mgl32.Vec2{0.0, 0.0},
-			zoom:             1.5,
+		MandlebrotInfo{
+			position:         mgl32.Vec2{0.5, 0.0},
+			zoom:             1.0,
 			rotation:         0.0,
 			rotationPivot:    mgl32.Vec2{0.0, 0.0},
 			colorModes:       []int32{0, 2, 1},
 			colorOffsets:     []float32{0.0, 0.0, 0.0},
-			maxIterations:    20,
+			maxIterations:    300,
 			exponentOne:      2,
 			exponentTwo:      2,
-			divideModifier:   1.0,
-			multiplyModifier: 1.0,
-			escapeModifier:   0.0},
+			divideModifier:   0.5,
+			multiplyModifier: 1.5,
+			escapeModifier:   1.0},
 		true, make(map[glfw.Key]bool)}
 
 	return &renderer

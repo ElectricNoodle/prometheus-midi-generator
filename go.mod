@@ -13,4 +13,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require golang.org/x/image v0.0.0-20190321063152-3fc05d484e9f // indirect
+require (
+	github.com/gomidi/connect v0.10.0 // indirect
+	github.com/gomidi/mid v0.20.3 // indirect
+	github.com/gomidi/midi v1.6.0 // indirect
+	gitlab.com/gomidi/midi/v2 v2.0.11
+	golang.org/x/image v0.0.0-20190321063152-3fc05d484e9f // indirect
+)
