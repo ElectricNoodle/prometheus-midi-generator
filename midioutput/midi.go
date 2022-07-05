@@ -132,7 +132,7 @@ func (midiEmitter *MIDIEmitter) setDevice(name string) {
 
 func (midiEmitter *MIDIEmitter) emitThread() {
 
-	out := midi.FindOutPort(midiEmitter.selectedMIDIDevice)
+	out := midi.FindOutPort("USB Midi")
 	sendMessage, err := midi.SendTo(out)
 
 	if err != nil {
@@ -148,11 +148,11 @@ func (midiEmitter *MIDIEmitter) emitThread() {
 			var midiMessage midi.Message
 
 			if message.Type == NoteOn {
-				log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+				//	log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
 				midiMessage = midi.NoteOn(1, uint8(int(octaveOffsets[message.Octave])+message.Note), uint8(message.Velocity))
 
 			} else if message.Type == NoteOff {
-				log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
+				//	log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
 				midiMessage = midi.NoteOff(1, uint8(int(octaveOffsets[message.Octave])+message.Note))
 			}
 

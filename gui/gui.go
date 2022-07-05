@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/ElectricNoodle/prometheus-midi-generator/fractals"
@@ -72,8 +73,8 @@ var prometheusModes = []string{"Live", "Playback"}
 var prometheusStartDate = "2022-04-01 00:00"
 var prometheusEndDate = "2022-04-01 23:59"
 
+var bpmStr string
 var processorKeysPos int32
-
 var processorModePos int32
 var processorMode = "Chromatic"
 var processorModes = []string{"Chromatic", "Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"}
@@ -92,6 +93,7 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 
 	log = logIn
 	go loggingThread(log)
+	bpmStr = "60"
 
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
 
@@ -248,7 +250,20 @@ func parseDateString(dateString string) float64 {
 /*renderProcessorOptions displays all the configurable options for sound generation. */
 func renderProcessorOptions(procInfo *processor.ProcInfo) {
 
-	imgui.Text("Processor Musical Options:")
+	imgui.Text("\t")
+	imgui.InputText("         ", &bpmStr)
+
+	if imgui.Button("Set BPM") {
+		bpm, err := strconv.Atoi(bpmStr)
+		if err != nil {
+			log.Printf("Invalid BPM: (%v)\n", bpmStr)
+		} else {
+			message := processor.ControlMessage{Type: processor.SetBPM, ValueNum: bpm, ValueString: ""}
+			procInfo.Control <- message
+		}
+
+	}
+
 	imgui.Text("\t")
 	imgui.Text("Key:")
 

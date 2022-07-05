@@ -104,11 +104,11 @@ const (
 )
 
 const maxVelocity = 110
-const defaultVelocity = 0
+const defaultVelocity = 10
 
 const maxEvents = 15
-const defaultBPM = 120
-const defaultTick = 250
+const defaultBPM = 60
+const defaultTicksPerBeat = 4
 
 const maxPreviousValues = 20
 
@@ -134,7 +134,7 @@ func NewProcessor(logIn *logging.Logger, processorConfig Config, inputChannel ch
 
 	log = logIn
 	processor := ProcInfo{make(chan ControlMessage, 6), inputChannel, make(chan midioutput.MIDIMessage, 6), defaultBPM,
-		defaultTick, 0, orderedmap.NewOrderedMap(), scaleMap{},
+		defaultTicksPerBeat, 0, orderedmap.NewOrderedMap(), scaleMap{},
 		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
 
 	processor.parseScales(processorConfig.Scales)
@@ -331,6 +331,7 @@ func (processor *ProcInfo) controlThread() {
 			processor.setScale(message.ValueString)
 
 		case SetBPM:
+			processor.BPM = float64(message.ValueNum)
 
 		case SetVelocityMode:
 
@@ -454,11 +455,18 @@ func (processor *ProcInfo) insertEvent(eventIn event) {
 }
 
 func (processor *ProcInfo) incrementTick() {
-	log.Printf("Tick: %v \n", processor.tick)
+
 	processor.tick += float64(processor.TickInc)
-	log.Printf("Tick: %v \n", processor.tick)
-	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
-	log.Printf("Tick: %v \n", processor.tick)
-	time.Sleep(processor.TickInc * time.Millisecond)
+
+	milliSecondsPerBeat := (60 / processor.BPM) * 1000
+	sleepTime := milliSecondsPerBeat / defaultTicksPerBeat
+
+	processor.TickInc = time.Duration(milliSecondsPerBeat / defaultTicksPerBeat)
+
+	if processor.tick >= milliSecondsPerBeat {
+		processor.tick = 0
+	}
+
+	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 
 }
