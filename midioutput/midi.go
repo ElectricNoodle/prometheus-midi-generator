@@ -2,7 +2,6 @@ package midioutput
 
 import (
 	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
-	"github.com/rakyll/portmidi"
 	"gitlab.com/gomidi/midi/v2"
 	_ "gitlab.com/gomidi/midi/v2/drivers/portmididrv" // autoregisters driver
 )
@@ -72,22 +71,16 @@ const (
 /*ControlMessage Used to store information on control messages recieved. */
 type ControlMessage struct {
 	Type  MessageType
-	Value int
-}
-
-type midiDevice struct {
-	id   int
-	info *portmidi.DeviceInfo
+	Value string
 }
 
 /*MIDIEmitter Holds relevant info needed to recieve input/emit midi messages. */
 type MIDIEmitter struct {
-	Control        chan ControlMessage
-	input          <-chan MIDIMessage
-	MIDIDevices    []midiDevice
-	configuredPort int
-	deviceCount    int
-	midiOutput     int
+	Control            chan ControlMessage
+	input              <-chan MIDIMessage
+	selectedMIDIDevice string
+	deviceCount        int
+	midiOutput         int
 }
 
 var maxDevices = 10
@@ -96,45 +89,22 @@ var maxDevices = 10
 func NewMidi(logIn *logging.Logger, inputChannel <-chan MIDIMessage) *MIDIEmitter {
 
 	log = logIn
-	midiEmitter := MIDIEmitter{make(chan ControlMessage, 6), inputChannel, []midiDevice{}, 0, 0, -1}
-
-	midiEmitter.initMIDI()
+	midiEmitter := MIDIEmitter{make(chan ControlMessage, 6), inputChannel, "USB MIDI", 0, -1}
 
 	go midiEmitter.controlThread()
 	go midiEmitter.emitThread()
+
 	return &midiEmitter
-}
-
-/*initMIDI Initializes the portmidi library and stores device info. */
-func (midiEmitter *MIDIEmitter) initMIDI() {
-
-	var err error
-	defer midi.CloseDriver()
-	outs := midi.OutPorts()
-
-	for _, o := range outs {
-		log.Printf("Found MIDI Port: %s\n", o)
-	}
-
-	if err != nil {
-		log.Printf("Failed to open MIDI port (%v)\n", err)
-	}
-
-	midiEmitter.setDevice(0)
-
 }
 
 /*GetDeviceNames returns an array of midi device names. */
 func (midiEmitter *MIDIEmitter) GetDeviceNames() []string {
 
-	names := make([]string, midiEmitter.deviceCount)
+	names := midi.OutPorts()
+	numDevices := len(names)
 
-	if midiEmitter.deviceCount < 1 {
+	if numDevices < 1 {
 		return []string{"No devices found."}
-	}
-
-	for i := 0; i < midiEmitter.deviceCount; i++ {
-		names[i] = midiEmitter.MIDIDevices[i].info.Name
 	}
 
 	return names
@@ -154,12 +124,15 @@ func (midiEmitter *MIDIEmitter) controlThread() {
 	}
 }
 
-func (midiEmitter *MIDIEmitter) setDevice(id int) {
+func (midiEmitter *MIDIEmitter) setDevice(name string) {
 
+	midiEmitter.selectedMIDIDevice = name
+	log.Printf("Midi Device set to %v\n", name)
 }
 
 func (midiEmitter *MIDIEmitter) emitThread() {
-	out := midi.FindOutPort("USB Midi")
+
+	out := midi.FindOutPort(midiEmitter.selectedMIDIDevice)
 	sendMessage, err := midi.SendTo(out)
 
 	if err != nil {
@@ -173,6 +146,7 @@ func (midiEmitter *MIDIEmitter) emitThread() {
 		if sendMessage != nil {
 
 			var midiMessage midi.Message
+
 			if message.Type == NoteOn {
 				log.Printf("Type: 0x%x MiDINote: Not+Oct:%d Note:%d\n", int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), int(message.Note))
 				midiMessage = midi.NoteOn(1, uint8(int(octaveOffsets[message.Octave])+message.Note), uint8(message.Velocity))

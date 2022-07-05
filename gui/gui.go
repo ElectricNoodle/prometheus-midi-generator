@@ -191,7 +191,7 @@ func renderMIDIOptions(midiEmitter *midioutput.MIDIEmitter) {
 
 	if imgui.ListBoxV("", &midiDevicesPos, midiEmitter.GetDeviceNames(), 2) {
 
-		midiEmitter.Control <- midioutput.ControlMessage{Type: midioutput.SetDevice, Value: int(midiDevicesPos)}
+		midiEmitter.Control <- midioutput.ControlMessage{Type: midioutput.SetDevice, Value: string(midiEmitter.GetDeviceNames()[midiDevicesPos])}
 
 	}
 

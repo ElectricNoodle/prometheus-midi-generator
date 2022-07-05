@@ -392,6 +392,7 @@ func (processor *ProcInfo) processMessage(value float64) {
 	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
 
 	processor.insertEvent(event)
+
 	log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
 
 	processor.addToPreviousValues(value)
@@ -453,9 +454,11 @@ func (processor *ProcInfo) insertEvent(eventIn event) {
 }
 
 func (processor *ProcInfo) incrementTick() {
-
+	log.Printf("Tick: %v \n", processor.tick)
 	processor.tick += float64(processor.TickInc)
+	log.Printf("Tick: %v \n", processor.tick)
 	processor.tick = math.Mod(processor.tick, (60/processor.BPM)*1000)
+	log.Printf("Tick: %v \n", processor.tick)
 	time.Sleep(processor.TickInc * time.Millisecond)
 
 }
