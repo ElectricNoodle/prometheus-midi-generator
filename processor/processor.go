@@ -106,6 +106,17 @@ const (
 const maxVelocity = 110
 const defaultVelocity = 0
 
+type chordMode int
+
+const (
+	none                chordMode = 0
+	majorOnly           chordMode = 1
+	minorOnly           chordMode = 2
+	ascendingMajDescMin chordMode = 3
+	ascendingMinDescMaj chordMode = 4
+	randomMajMin        chordMode = 5
+)
+
 const maxEvents = 200
 const defaultBPM = 60
 const defaultTicksPerBeat = 4
@@ -124,6 +135,7 @@ type ProcInfo struct {
 	activeScale         scaleMap
 	rootNoteOffset      int
 	velocitySensingMode velocityMode
+	chordGenerationMode chordMode
 	previousValues      *list.List
 	maxVariance         float64
 	events              []event
@@ -133,9 +145,11 @@ type ProcInfo struct {
 func NewProcessor(logIn *logging.Logger, processorConfig Config, inputChannel chan float64) *ProcInfo {
 
 	log = logIn
-	processor := ProcInfo{make(chan ControlMessage, 6), inputChannel, make(chan midioutput.MIDIMessage, 6), defaultBPM,
-		defaultTicksPerBeat, 0, orderedmap.NewOrderedMap(), scaleMap{},
-		0, singleNoteVariance, list.New(), 0, make([]event, maxEvents)}
+	processor := ProcInfo{Control: make(chan ControlMessage, 6), input: inputChannel,
+		Output: make(chan midioutput.MIDIMessage, 6), BPM: defaultBPM,
+		TickInc: defaultTicksPerBeat, tick: 0, scales: orderedmap.NewOrderedMap(), activeScale: scaleMap{},
+		rootNoteOffset: 0, velocitySensingMode: singleNoteVariance, chordGenerationMode: 0,
+		previousValues: list.New(), maxVariance: 0, events: make([]event, maxEvents)}
 
 	processor.parseScales(processorConfig.Scales)
 	processor.generateNotesOfScale(noteIndexes["A"])
@@ -377,11 +391,14 @@ func (processor *ProcInfo) addToPreviousValues(value float64) {
 func (processor *ProcInfo) processMessage(value float64) {
 	/*  */
 	noteVal := int(value) % len(processor.activeScale.notes)
-	event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
 
-	processor.insertEvent(event)
+	if processor.chordGenerationMode == none {
 
-	log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+		event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
+		processor.insertEvent(event)
+		log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+
+	}
 
 	processor.addToPreviousValues(value)
 }
