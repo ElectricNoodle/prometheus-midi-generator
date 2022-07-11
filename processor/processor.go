@@ -62,12 +62,13 @@ const (
 
 /*event Stores information needed to send different types of MIDI Message. */
 type event struct {
-	eventType eventType
-	state     eventState
-	duration  int
-	value     int
-	octave    int
-	velocity  int64
+	eventType   eventType
+	state       eventState
+	duration    int
+	value       int
+	octave      int
+	velocity    int64
+	midiChannel int
 }
 
 /*MessageType Defines the different types of Control Message.*/
@@ -394,8 +395,34 @@ func (processor *ProcInfo) processMessage(value float64) {
 
 	if processor.chordGenerationMode == none {
 
-		event := event{note, ready, 4, processor.activeScale.offsets[noteVal], 3, processor.getVelocity(value)}
+		velocity := processor.getVelocity(value)
+		event := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
+			octave: 3, velocity: velocity, midiChannel: 1}
+
 		processor.insertEvent(event)
+		log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+
+	} else if processor.chordGenerationMode == majorOnly {
+
+		velocity := processor.getVelocity(value)
+		rootNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
+			octave: 3, velocity: velocity, midiChannel: 1}
+
+		majorFirst, majorSecond, majorThird := processor.getMajorTriad(noteVal)
+
+		majorFirstNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorFirst],
+			octave: 3, velocity: velocity, midiChannel: 2}
+		majorSecondNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorSecond],
+			octave: 3, velocity: velocity, midiChannel: 2}
+		majorThirdtNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorThird],
+			octave: 3, velocity: velocity, midiChannel: 2}
+
+		processor.insertEvent(rootNoteEvent)
+
+		processor.insertEvent(majorFirstNoteEvent)
+		processor.insertEvent(majorSecondNoteEvent)
+		processor.insertEvent(majorThirdtNoteEvent)
+
 		log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
 
 	}
@@ -438,7 +465,9 @@ func (processor *ProcInfo) handleEvents() {
 				log.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
 
 				processor.events[i].state = active
-				processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value, Octave: processor.events[i].octave, Velocity: e.velocity}
+				processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1,
+					Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value,
+					Octave: processor.events[i].octave, Velocity: e.velocity}
 				//processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn}
 				break
 			} else if e.state == stop {
