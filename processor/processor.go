@@ -104,9 +104,9 @@ const (
 )
 
 const maxVelocity = 110
-const defaultVelocity = 10
+const defaultVelocity = 0
 
-const maxEvents = 15
+const maxEvents = 200
 const defaultBPM = 60
 const defaultTicksPerBeat = 4
 
@@ -231,33 +231,20 @@ func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex int) {
 	}
 }
 
-/*
-	note_index = allnotes.index(note)
-	maj_third_i = note_index + 4
-	major_third = allnotes[maj_third_i]
-	min_fifth_i = maj_third_i + 3
-	minor_fifth = allnotes[min_fifth_i]
-	majortriad = (note,major_third,minor_fifth)
-	return majortriad
-*/
-func (processor *ProcInfo) getMajorTriad(note int) {
-	//index := int(note)
-	//majorThirdIndex := index + 4
-	//	minorFifthIndex := majorThirdIndex + 3
+func (processor *ProcInfo) getMajorTriad(note int) (int, int, int) {
 
+	maj_third := note + 4
+	min_fifth := maj_third + 3
+
+	return note, maj_third, min_fifth
 }
 
-/*
-	note_index = allnotes.index(note)
-	min_third_i = note_index + 3
-	minor_third = allnotes[min_third_i]
-	maj_fifth_i = min_third_i + 4
-	major_fifth = allnotes[maj_fifth_i]
-	minortriad = (note,minor_third,major_fifth)
-	return minortriad
-*/
-func (processor *ProcInfo) getMinorTriad(note int) {
+func (processor *ProcInfo) getMinorTriad(note int) (int, int, int) {
 
+	min_third := note + 3
+	maj_fifth := min_third + 4
+
+	return note, min_third, maj_fifth
 }
 
 /*getVelocity implements the logic for different types of velocity sensing based on input metrics:
