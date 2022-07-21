@@ -468,7 +468,6 @@ func (processor *ProcInfo) handleEvents() {
 				processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1,
 					Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value,
 					Octave: processor.events[i].octave, Velocity: e.velocity}
-				//processor.Output <- midioutput.MIDIMessage{Channel: midioutput.Channel1, Type: midioutput.NoteOn}
 				break
 			} else if e.state == stop {
 				processor.events[i] = event{}

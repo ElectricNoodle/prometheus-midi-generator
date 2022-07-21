@@ -101,7 +101,7 @@ vec2 rotateScaleTranslate(vec2 position, float rotation, float zoom, vec2 posOff
 
 
     //vec3 result =rotMat * scaleMat * translation  * vec3(position - pivot,1.0) + vec3(pivot, 1.0);
-    vec3 result =rotMat * scaleMat * translation  *vec3(position,1.0);
+   vec3 result =rotMat * scaleMat * translation  *vec3(position,1.0);
     return vec2(result.x,result.y);
 }
 
@@ -111,7 +111,8 @@ void main() {
 
     vec2 coord = rotateScaleTranslate(iCoord, rotOffset, zoomOffset, posOffset,rotPivot);
 
-    //coord = coord + posOffset;
+//    coord = coord + posOffset;
+
     float mandleBrotValue = (iterateMandelbrot(coord) * multModifier / divModifier);
     
     fragColor = vec4( getColor(mandleBrotValue, rOffset, rMode),
