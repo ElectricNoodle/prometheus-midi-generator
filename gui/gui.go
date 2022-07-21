@@ -70,8 +70,8 @@ var prometheusModePos int32
 var prometheusMode = prometheus.Live
 var prometheusModes = []string{"Live", "Playback"}
 
-var prometheusStartDate = "2022-04-01 00:00"
-var prometheusEndDate = "2022-04-01 23:59"
+var prometheusStartDate = "2022-06-20 00:00"
+var prometheusEndDate = "2022-06-20 23:59"
 
 var bpmStr string
 var processorKeysPos int32
@@ -94,6 +94,11 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 	log = logIn
 	go loggingThread(log)
 	bpmStr = "60"
+
+	currentTime := time.Now()
+	startTime := currentTime.Add(-time.Hour * 24)
+	prometheusStartDate = startTime.Format("2006-01-02 15:04:05")
+	prometheusEndDate = currentTime.Format("2006-01-02 15:04:05")
 
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
 

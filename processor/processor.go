@@ -149,7 +149,7 @@ func NewProcessor(logIn *logging.Logger, processorConfig Config, inputChannel ch
 	processor := ProcInfo{Control: make(chan ControlMessage, 6), input: inputChannel,
 		Output: make(chan midioutput.MIDIMessage, 6), BPM: defaultBPM,
 		TickInc: defaultTicksPerBeat, tick: 0, scales: orderedmap.NewOrderedMap(), activeScale: scaleMap{},
-		rootNoteOffset: 0, velocitySensingMode: singleNoteVariance, chordGenerationMode: 0,
+		rootNoteOffset: 0, velocitySensingMode: singleNoteVariance, chordGenerationMode: majorOnly,
 		previousValues: list.New(), maxVariance: 0, events: make([]event, maxEvents)}
 
 	processor.parseScales(processorConfig.Scales)
@@ -246,18 +246,18 @@ func (processor *ProcInfo) generateNotesOfScale(rootNoteIndex int) {
 	}
 }
 
-func (processor *ProcInfo) getMajorTriad(note int) (int, int, int) {
+func (processor *ProcInfo) getMajorTriad(note int, numNotes int) (int, int, int) {
 
-	maj_third := note + 4
-	min_fifth := maj_third + 3
+	maj_third := (note + 4) % numNotes
+	min_fifth := (maj_third + 3) % numNotes
 
 	return note, maj_third, min_fifth
 }
 
-func (processor *ProcInfo) getMinorTriad(note int) (int, int, int) {
+func (processor *ProcInfo) getMinorTriad(note int, numNotes int) (int, int, int) {
 
-	min_third := note + 3
-	maj_fifth := min_third + 4
+	min_third := (note + 3) % numNotes
+	maj_fifth := (min_third + 4) % numNotes
 
 	return note, min_third, maj_fifth
 }
@@ -400,7 +400,7 @@ func (processor *ProcInfo) processMessage(value float64) {
 			octave: 3, velocity: velocity, midiChannel: 1}
 
 		processor.insertEvent(event)
-		log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+		log.Printf("RootNote: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
 
 	} else if processor.chordGenerationMode == majorOnly {
 
@@ -408,7 +408,7 @@ func (processor *ProcInfo) processMessage(value float64) {
 		rootNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
 			octave: 3, velocity: velocity, midiChannel: 1}
 
-		majorFirst, majorSecond, majorThird := processor.getMajorTriad(noteVal)
+		majorFirst, majorSecond, majorThird := processor.getMajorTriad(noteVal, len(processor.activeScale.notes))
 
 		majorFirstNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorFirst],
 			octave: 3, velocity: velocity, midiChannel: 2}
@@ -423,8 +423,19 @@ func (processor *ProcInfo) processMessage(value float64) {
 		processor.insertEvent(majorSecondNoteEvent)
 		processor.insertEvent(majorThirdtNoteEvent)
 
-		log.Printf("Note: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+		log.Printf("RootNote: %s Value: %f Index: %d Offset: %d\n",
+			processor.activeScale.notes[noteVal],
+			value,
+			noteVal,
+			processor.activeScale.offsets[noteVal])
 
+		log.Printf("Chord: [%s,%s,%s] Offsets: [%d,%d,%d]\n",
+			processor.activeScale.notes[majorFirst],
+			processor.activeScale.notes[majorSecond],
+			processor.activeScale.notes[majorThird],
+			processor.activeScale.offsets[majorFirst],
+			processor.activeScale.offsets[majorSecond],
+			processor.activeScale.offsets[majorThird])
 	}
 
 	processor.addToPreviousValues(value)
