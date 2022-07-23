@@ -80,6 +80,7 @@ const (
 	SetMode         MessageType = 1
 	SetVelocityMode MessageType = 2
 	SetBPM          MessageType = 3
+	SetChordMode    MessageType = 4
 )
 
 /*ControlMessage Used for sending control messages to processor.*/
@@ -109,13 +110,14 @@ const defaultVelocity = 0
 
 type chordMode int
 
+var chordModesStr = []string{"Single Note", "Major", "Minor", "Asc Major", "Asc Minor"}
+
 const (
 	none                chordMode = 0
 	majorOnly           chordMode = 1
 	minorOnly           chordMode = 2
 	ascendingMajDescMin chordMode = 3
 	ascendingMinDescMaj chordMode = 4
-	randomMajMin        chordMode = 5
 )
 
 const maxEvents = 200
@@ -337,6 +339,13 @@ func (processor *ProcInfo) controlThread() {
 
 		case SetVelocityMode:
 
+		case SetChordMode:
+			for i, mode := range chordModesStr {
+				if mode == message.ValueString {
+					processor.chordGenerationMode = chordMode(i)
+					log.Printf("Chord Mode set to %s \n", message.ValueString)
+				}
+			}
 		}
 	}
 }
@@ -358,6 +367,10 @@ func (processor *ProcInfo) GetModeNames() []string {
 	}
 
 	return names
+}
+
+func (processor *ProcInfo) GetGenerationModes() []string {
+	return chordModesStr
 }
 
 /*generationThread Handles event processing and timing of note emission acting like a sequencer for notes.*/

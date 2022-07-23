@@ -76,8 +76,9 @@ var prometheusEndDate = "2022-06-20 23:59"
 var bpmStr string
 var processorKeysPos int32
 var processorModePos int32
-var processorMode = "Chromatic"
-var processorModes = []string{"Chromatic", "Ionian", "Dorian", "Phrygian", "Lydian", "Mixolydian", "Aeolian", "Locrian"}
+
+var processorGenMode = "Single Note"
+var processorGenModes = []string{"Single Note", "Major Chords", "Minor Chords", "Asc Major", "Asc Minor"}
 
 var processorGenerationTypePos int32
 var processorGenerationType = "Chromatic"
@@ -269,11 +270,21 @@ func renderProcessorOptions(procInfo *processor.ProcInfo) {
 		}
 
 	}
+	imgui.Text("\t")
+
+	imgui.Text("Mode:")
+
+	if imgui.ListBoxV("   ", &processorGenerationTypePos, procInfo.GetGenerationModes(), 3) {
+
+		message := processor.ControlMessage{Type: processor.SetChordMode, ValueNum: 0, ValueString: procInfo.GetGenerationModes()[processorGenerationTypePos]}
+		procInfo.Control <- message
+
+	}
 
 	imgui.Text("\t")
 	imgui.Text("Key:")
 
-	if imgui.ListBoxV("  ", &processorKeysPos, procInfo.GetKeyNames(), 5) {
+	if imgui.ListBoxV("    ", &processorKeysPos, procInfo.GetKeyNames(), 3) {
 
 		message := processor.ControlMessage{Type: processor.SetKey, ValueNum: int(processorKeysPos), ValueString: ""}
 		procInfo.Control <- message
@@ -281,9 +292,9 @@ func renderProcessorOptions(procInfo *processor.ProcInfo) {
 	}
 
 	imgui.Text("\t")
-	imgui.Text("Mode:")
+	imgui.Text("Scale:")
 
-	if imgui.ListBoxV("   ", &processorModePos, procInfo.GetModeNames(), 5) {
+	if imgui.ListBoxV("     ", &processorModePos, procInfo.GetModeNames(), 3) {
 
 		message := processor.ControlMessage{Type: processor.SetMode, ValueNum: 0, ValueString: procInfo.GetModeNames()[processorModePos]}
 		procInfo.Control <- message
