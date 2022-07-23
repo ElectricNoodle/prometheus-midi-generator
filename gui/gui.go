@@ -97,8 +97,9 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 
 	currentTime := time.Now()
 	startTime := currentTime.Add(-time.Hour * 24)
-	prometheusStartDate = startTime.Format("2006-01-02 15:04:05")
-	prometheusEndDate = currentTime.Format("2006-01-02 15:04:05")
+
+	prometheusStartDate = startTime.Format("2006-01-02 15:04")
+	prometheusEndDate = currentTime.Format("2006-01-02 15:04")
 
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
 

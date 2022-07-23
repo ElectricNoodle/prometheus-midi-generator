@@ -117,7 +117,7 @@ func NewScraper(logIn *logging.Logger, server string, mode OutputType) *Scraper 
 
 	log = logIn
 	queryEndpoint := "http://" + server + "/api/v1/query_range"
-	scraper := Scraper{queryEndpoint, make(chan float64, 600), make(chan ControlMessage, 6), mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate, true}
+	scraper := Scraper{queryEndpoint, make(chan float64, 3), make(chan ControlMessage, 6), mode, queue.NewRingBuffer(defaultRingSize), defaultPollRate, defaulttOutputRate, true}
 
 	go scraper.prometheusControlThread()
 

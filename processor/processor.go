@@ -388,6 +388,32 @@ func (processor *ProcInfo) addToPreviousValues(value float64) {
 	processor.previousValues.PushFront(value)
 }
 
+func (processor *ProcInfo) sendNoteEvent(e event, rawValue float64, noteVal int) {
+
+	log.Printf("RootNote: %s Value: %f Index: %d Offset: %d\n",
+		processor.activeScale.notes[noteVal],
+		rawValue,
+		noteVal,
+		processor.activeScale.offsets[noteVal])
+
+	processor.insertEvent(e)
+}
+
+func (processor *ProcInfo) sendChordEvent(notes []int, velocity int64, octave int, midiChannel int) {
+
+	log.Printf("Chord: [")
+	for _, n := range notes {
+
+		e := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[n],
+			octave: octave, velocity: velocity, midiChannel: midiChannel}
+
+		processor.insertEvent(e)
+
+		log.Printf("%s,", processor.activeScale.notes[n])
+	}
+	log.Printf("]\n")
+}
+
 /*processMessage Handles mapping metric value into note value. Also pushes event into sequencer. */
 func (processor *ProcInfo) processMessage(value float64) {
 	/*  */
@@ -399,43 +425,72 @@ func (processor *ProcInfo) processMessage(value float64) {
 		event := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
 			octave: 3, velocity: velocity, midiChannel: 1}
 
-		processor.insertEvent(event)
-		log.Printf("RootNote: %s Value: %f Index: %d Offset: %d\n", processor.activeScale.notes[noteVal], value, noteVal, processor.activeScale.offsets[noteVal])
+		processor.sendNoteEvent(event, value, noteVal)
 
 	} else if processor.chordGenerationMode == majorOnly {
 
 		velocity := processor.getVelocity(value)
 		rootNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
-			octave: 3, velocity: velocity, midiChannel: 1}
-
+			octave: 4, velocity: velocity, midiChannel: 1}
 		majorFirst, majorSecond, majorThird := processor.getMajorTriad(noteVal, len(processor.activeScale.notes))
 
-		majorFirstNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorFirst],
-			octave: 3, velocity: velocity, midiChannel: 2}
-		majorSecondNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorSecond],
-			octave: 3, velocity: velocity, midiChannel: 2}
-		majorThirdtNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[majorThird],
-			octave: 3, velocity: velocity, midiChannel: 2}
+		processor.sendNoteEvent(rootNoteEvent, value, noteVal)
+		processor.sendChordEvent([]int{majorFirst, majorSecond, majorThird}, velocity, 3, 2)
 
-		processor.insertEvent(rootNoteEvent)
+	} else if processor.chordGenerationMode == minorOnly {
 
-		processor.insertEvent(majorFirstNoteEvent)
-		processor.insertEvent(majorSecondNoteEvent)
-		processor.insertEvent(majorThirdtNoteEvent)
+		velocity := processor.getVelocity(value)
+		rootNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
+			octave: 4, velocity: velocity, midiChannel: 1}
+		minorFirst, minorSecond, minorThird := processor.getMinorTriad(noteVal, len(processor.activeScale.notes))
 
-		log.Printf("RootNote: %s Value: %f Index: %d Offset: %d\n",
-			processor.activeScale.notes[noteVal],
-			value,
-			noteVal,
-			processor.activeScale.offsets[noteVal])
+		processor.sendNoteEvent(rootNoteEvent, value, noteVal)
+		processor.sendChordEvent([]int{minorFirst, minorSecond, minorThird}, velocity, 3, 2)
 
-		log.Printf("Chord: [%s,%s,%s] Offsets: [%d,%d,%d]\n",
-			processor.activeScale.notes[majorFirst],
-			processor.activeScale.notes[majorSecond],
-			processor.activeScale.notes[majorThird],
-			processor.activeScale.offsets[majorFirst],
-			processor.activeScale.offsets[majorSecond],
-			processor.activeScale.offsets[majorThird])
+	} else if processor.chordGenerationMode == ascendingMajDescMin {
+
+		velocity := processor.getVelocity(value)
+		rootNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
+			octave: 4, velocity: velocity, midiChannel: 1}
+
+		processor.sendNoteEvent(rootNoteEvent, value, noteVal)
+
+		if processor.previousValues.Front() != nil {
+
+			previousValue := processor.previousValues.Front().Value.(float64)
+
+			if previousValue < value {
+				majorFirst, majorSecond, majorThird := processor.getMajorTriad(noteVal, len(processor.activeScale.notes))
+				processor.sendChordEvent([]int{majorFirst, majorSecond, majorThird}, velocity, 3, 2)
+
+			} else {
+				minorFirst, minorSecond, minorThird := processor.getMinorTriad(noteVal, len(processor.activeScale.notes))
+				processor.sendChordEvent([]int{minorFirst, minorSecond, minorThird}, velocity, 3, 2)
+			}
+		}
+
+	} else if processor.chordGenerationMode == ascendingMinDescMaj {
+
+		velocity := processor.getVelocity(value)
+		rootNoteEvent := event{eventType: note, state: ready, duration: 4, value: processor.activeScale.offsets[noteVal],
+			octave: 4, velocity: velocity, midiChannel: 1}
+
+		if processor.previousValues.Front() != nil {
+
+			previousValue := processor.previousValues.Front().Value.(float64)
+
+			if previousValue < value {
+				minorFirst, minorSecond, minorThird := processor.getMinorTriad(noteVal, len(processor.activeScale.notes))
+				processor.sendChordEvent([]int{minorFirst, minorSecond, minorThird}, velocity, 3, 2)
+			} else {
+				majorFirst, majorSecond, majorThird := processor.getMajorTriad(noteVal, len(processor.activeScale.notes))
+				processor.sendChordEvent([]int{majorFirst, majorSecond, majorThird}, velocity, 3, 2)
+
+			}
+		}
+
+		processor.sendNoteEvent(rootNoteEvent, value, noteVal)
+
 	}
 
 	processor.addToPreviousValues(value)
