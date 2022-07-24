@@ -81,6 +81,8 @@ const (
 	SetVelocityMode MessageType = 2
 	SetBPM          MessageType = 3
 	SetChordMode    MessageType = 4
+	StopProcessor   MessageType = 5
+	StartProcessor  MessageType = 6
 )
 
 /*ControlMessage Used for sending control messages to processor.*/
@@ -142,6 +144,7 @@ type ProcInfo struct {
 	previousValues      *list.List
 	maxVariance         float64
 	events              []event
+	active              bool
 }
 
 /*NewProcessor returns a new instance of the processor stack and starts the control/generation threads. */
@@ -152,7 +155,7 @@ func NewProcessor(logIn *logging.Logger, processorConfig Config, inputChannel ch
 		Output: make(chan midioutput.MIDIMessage, 6), BPM: defaultBPM,
 		TickInc: defaultTicksPerBeat, tick: 0, scales: orderedmap.NewOrderedMap(), activeScale: scaleMap{},
 		rootNoteOffset: 0, velocitySensingMode: singleNoteVariance, chordGenerationMode: majorOnly,
-		previousValues: list.New(), maxVariance: 0, events: make([]event, maxEvents)}
+		previousValues: list.New(), maxVariance: 0, events: make([]event, maxEvents), active: true}
 
 	processor.parseScales(processorConfig.Scales)
 	processor.generateNotesOfScale(noteIndexes["A"])
@@ -343,9 +346,12 @@ func (processor *ProcInfo) controlThread() {
 			for i, mode := range chordModesStr {
 				if mode == message.ValueString {
 					processor.chordGenerationMode = chordMode(i)
-					log.Printf("Chord Mode set to %s \n", message.ValueString)
 				}
 			}
+		case StopProcessor:
+			processor.active = false
+		case StartProcessor:
+			processor.active = true
 		}
 	}
 }
@@ -381,7 +387,9 @@ func (processor *ProcInfo) generationThread() {
 	for {
 		select {
 		case message := <-processor.input:
-			processor.processMessage(message)
+			if processor.active {
+				processor.processMessage(message)
+			}
 		default:
 			if processor.tick == 0 {
 				processor.handleEvents()
@@ -539,7 +547,7 @@ func (processor *ProcInfo) handleEvents() {
 	for i, e := range processor.events {
 
 		if (event{}) != e {
-			if e.state == ready {
+			if e.state == ready && processor.active {
 
 				log.Printf("Send start %d Oct: %d Vel: %d\n", processor.rootNoteOffset+e.value, e.octave, e.velocity)
 
@@ -548,6 +556,8 @@ func (processor *ProcInfo) handleEvents() {
 					Type: midioutput.NoteOn, Note: processor.rootNoteOffset + processor.events[i].value,
 					Octave: processor.events[i].octave, Velocity: e.velocity}
 				break
+			} else if e.state == ready && !processor.active {
+				processor.events[i] = event{}
 			} else if e.state == stop {
 				processor.events[i] = event{}
 			}

@@ -140,10 +140,18 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 				renderPrometheusOptions(scraper)
 			}
 			if imgui.CollapsingHeader("Processor Options") {
+				//	if imgui.CollapsingHeader("Processor1") {
 				renderProcessorOptions(procInfo)
+				//	}
+				//	if imgui.Button("+") {
+				//				}
+				//imgui.SameLine()
+				//if imgui.Button("-") {
+
+				//}
 			}
 
-			renderStartStopButtons(scraper)
+			renderStartStopButtons(scraper, procInfo)
 
 			imgui.End()
 		}
@@ -259,6 +267,7 @@ func renderProcessorOptions(procInfo *processor.ProcInfo) {
 
 	imgui.Text("\t")
 	imgui.InputText("         ", &bpmStr)
+	imgui.SameLine()
 
 	if imgui.Button("Set BPM") {
 		bpm, err := strconv.Atoi(bpmStr)
@@ -309,7 +318,7 @@ func renderProcessorOptions(procInfo *processor.ProcInfo) {
 	*/
 }
 
-func renderStartStopButtons(scraper *prometheus.Scraper) {
+func renderStartStopButtons(scraper *prometheus.Scraper, procInfo *processor.ProcInfo) {
 
 	imgui.Text("\t")
 
@@ -317,7 +326,11 @@ func renderStartStopButtons(scraper *prometheus.Scraper) {
 
 		queryInfo := prometheus.QueryInfo{Query: metric, Start: parseDateString(prometheusStartDate), End: parseDateString(prometheusEndDate), Step: 600}
 		message := prometheus.ControlMessage{Type: prometheus.StartOutput, OutputType: prometheusMode, QueryInfo: queryInfo, Value: 0}
+
 		scraper.Control <- message
+
+		stopProcessor := processor.ControlMessage{Type: processor.StartProcessor, ValueNum: 0, ValueString: ""}
+		procInfo.Control <- stopProcessor
 
 	}
 
@@ -329,6 +342,9 @@ func renderStartStopButtons(scraper *prometheus.Scraper) {
 
 		messageStop := prometheus.ControlMessage{Type: prometheus.StopOutput, OutputType: prometheus.Playback, QueryInfo: prometheus.QueryInfo{}, Value: 0}
 		scraper.Control <- messageStop
+
+		stopProcessor := processor.ControlMessage{Type: processor.StopProcessor, ValueNum: 0, ValueString: ""}
+		procInfo.Control <- stopProcessor
 
 	}
 }
