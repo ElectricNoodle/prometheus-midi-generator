@@ -69,26 +69,19 @@ type FractalRenderer struct {
 	keyPressMap    map[glfw.Key]bool
 }
 
-/*NewFractalRenderer Returns a new instance of FractalRenderer
-
-position         mgl32.Vec2
-zoom             float32
-rotation         float32
-rotationPivot    mgl32.Vec2
-colorModes       []int32
-colorOffsets     []float32
-maxIterations    float32
-exponentOne      float32
-exponentTwo      float32
-divideModifier   float32
-multiplyModifier float32
-escapeModifier   float32
-*/
+/*NewFractalRenderer Returns a new instance of FractalRenderer*/
 func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 
 	log = logIn
-	renderer := FractalRenderer{false, 0, 0, 0, 0, 0.0, nil,
-		MandlebrotInfo{
+	renderer := FractalRenderer{
+		initialized: false,
+		program: 0,
+		vao: 0,
+		fps: 0,
+		vertexShader: 0,
+		fragmentShader: 0,
+		activeFractal: nil,
+		mandlebrotInfo: MandlebrotInfo{
 			position:         mgl32.Vec2{0.0, 0.0},
 			zoom:             1.0,
 			rotation:         0.0,
@@ -101,7 +94,8 @@ func NewFractalRenderer(logIn *logging.Logger) *FractalRenderer {
 			divideModifier:   1.0,
 			multiplyModifier: 1.0,
 			escapeModifier:   1.0},
-		true, make(map[glfw.Key]bool)}
+		keysEnabled: true,
+		keyPressMap: make(map[glfw.Key]bool)}
 
 	return &renderer
 }
