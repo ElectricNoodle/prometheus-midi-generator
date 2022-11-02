@@ -165,14 +165,5 @@ func (midiEmitter *MIDIEmitter) emitThread() {
 		} else {
 			log.Println("No MIDI Device configured.")
 		}
-		/*miiEmitter.midiOutput.WriteShort(0x80, 60, 100)
-
-		if midiEmitter.midiOutput != nil {
-
-			midiEmitter.midiOutput.WriteShort(int64(message.Type+message.Channel), int64(int(octaveOffsets[message.Octave])+message.Note), message.Velocity)
-
-		} else {
-		}
-		*/
 	}
 }

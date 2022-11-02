@@ -3,7 +3,7 @@ package gui
 import (
 	"strconv"
 	"time"
-
+	"github.com/ElectricNoodle/prometheus-midi-generator/graph"
 	"github.com/ElectricNoodle/prometheus-midi-generator/fractals"
 	"github.com/ElectricNoodle/prometheus-midi-generator/logging"
 	"github.com/ElectricNoodle/prometheus-midi-generator/midioutput"
@@ -88,7 +88,7 @@ var processorGenerationTypes = []string{"Modulus(Ch1)", "ModulusPlus(Ch1)", "Mod
 var open = true
 
 /*Run Main GUI Loop that handles rendering of interface and at some point fractals... */
-func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter, fractalRenderer *fractals.FractalRenderer) {
+func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scraper, procInfo *processor.ProcInfo, midiEmitter *midioutput.MIDIEmitter, fractalRenderer *fractals.FractalRenderer, graphRenderer *graph.GraphRenderer) {
 
 	imgui.CurrentIO().SetClipboard(clipboard{platform: p})
 
@@ -105,6 +105,8 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 	clearColor := [4]float32{0.0, 0.0, 0.0, 1.0}
 
 	fractalRenderer.Init()
+	graphRenderer.Init()
+
 
 	for !p.ShouldStop() {
 		p.ProcessEvents()
@@ -162,6 +164,7 @@ func Run(p Platform, r Renderer, logIn *logging.Logger, scraper *prometheus.Scra
 		r.PreRender(clearColor)
 
 		fractalRenderer.Render(p.DisplaySize(), p.FramebufferSize())
+		graphRenderer.Render(p.DisplaySize(), p.FramebufferSize())
 
 		r.Render(p.DisplaySize(), p.FramebufferSize(), imgui.RenderedDrawData())
 		p.PostRender()
@@ -379,7 +382,6 @@ func renderFractal(displaySize [2]float32, framebufferSize [2]float32) {
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
 
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-	//gl.UseProgram(program)
 
 	gl.BindVertexArray(vao)
 	gl.DrawArrays(gl.TRIANGLES, 0, int32(len(vertices)/3))

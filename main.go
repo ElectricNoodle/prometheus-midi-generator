@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ElectricNoodle/prometheus-midi-generator/fractals"
+	"github.com/ElectricNoodle/prometheus-midi-generator/graph"
 	"github.com/ElectricNoodle/prometheus-midi-generator/gui"
 	"github.com/ElectricNoodle/prometheus-midi-generator/gui/platforms"
 	"github.com/ElectricNoodle/prometheus-midi-generator/gui/renderers"
@@ -29,6 +30,7 @@ var scraper *prometheus.Scraper
 var metricProcessor *processor.ProcInfo
 var midiEmitter *midioutput.MIDIEmitter
 var fractalRenderer *fractals.FractalRenderer
+var graphRenderer *graph.GraphRenderer
 
 func main() {
 
@@ -81,7 +83,7 @@ func initializeBackend() {
 	metricProcessor = processor.NewProcessor(log, configuration.ProcessorConfig, scraper.Output)
 	midiEmitter = midioutput.NewMidi(log, metricProcessor.Output)
 	fractalRenderer = fractals.NewFractalRenderer(log)
-
+	graphRenderer = graph.NewGraphRenderer(log)
 }
 
 func initializeGUI() {
@@ -110,5 +112,5 @@ func initializeGUI() {
 
 	defer renderer.Dispose()
 
-	gui.Run(platform, renderer, log, scraper, metricProcessor, midiEmitter, fractalRenderer)
+	gui.Run(platform, renderer, log, scraper, metricProcessor, midiEmitter, fractalRenderer, graphRenderer)
 }

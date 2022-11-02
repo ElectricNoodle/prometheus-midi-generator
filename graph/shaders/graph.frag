@@ -1,4 +1,6 @@
 #version 410
+precision highp float;
+
 layout (location = 0) in vec3 vertexPosition_modelspace; // the position variable has attribute position 0
   
 
