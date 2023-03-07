@@ -8,16 +8,11 @@ require (
 	github.com/go-gl/glfw v0.0.0-20220320163800-277f93cfa958
 	github.com/go-gl/mathgl v1.0.0
 	github.com/golang-collections/go-datastructures v0.0.0-20150211160725-59788d5eb259
-	github.com/inkyblackness/imgui-go v1.12.0
 	github.com/inkyblackness/imgui-go/v4 v4.4.0
-	github.com/rakyll/portmidi v0.0.0-20201020180702-d436ceaa537a
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/gomidi/connect v0.10.0 // indirect
-	github.com/gomidi/mid v0.20.3 // indirect
-	github.com/gomidi/midi v1.6.0 // indirect
 	gitlab.com/gomidi/midi/v2 v2.0.11
-	golang.org/x/image v0.0.0-20190321063152-3fc05d484e9f // indirect
+	golang.org/x/image v0.5.0 // indirect
 )
